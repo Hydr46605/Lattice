@@ -1,0 +1,143 @@
+name: GitHub Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, without the leading v. Defaults to gradle.properties."
+        required: false
+      prerelease:
+        description: "Mark the GitHub release as a prerelease."
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Publish Packages And Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          validate-wrappers: false
+
+      - name: Resolve release
+        id: release
+        shell: bash
+        run: |
+          if [[ -n "${{ inputs.version }}" ]]; then
+            version="${{ inputs.version }}"
+          elif [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="$(grep '^latticeVersion=' gradle.properties | cut -d= -f2)"
+          fi
+
+          project_version="$(grep '^latticeVersion=' gradle.properties | cut -d= -f2)"
+          if [[ "${project_version}" != "${version}" ]]; then
+            echo "::error::Release version ${version} does not match gradle.properties (${project_version})."
+            exit 1
+          fi
+
+          prerelease="false"
+          if [[ "${{ inputs.prerelease }}" == "true" || "${version}" == 0.* ]]; then
+            prerelease="true"
+          fi
+
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "tag=v${version}" >> "${GITHUB_OUTPUT}"
+          echo "prerelease=${prerelease}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build
+        run: ./gradlew --no-daemon -PlatticeVersion=${{ steps.release.outputs.version }} build :lattice-paper:standaloneJar
+
+      - name: Publish to GitHub Packages
+        run: ./gradlew --no-daemon -PlatticeVersion=${{ steps.release.outputs.version }} publish
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Write release notes
+        shell: bash
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          mkdir -p build/release
+          cat > build/release/notes.md <<NOTES
+          Initial Lattice framework release.
+
+          ## Artifacts
+
+          - GitHub Packages: \`dev.beryl:lattice-core:${VERSION}\`
+          - GitHub Packages: \`dev.beryl:lattice-paper:${VERSION}\`
+          - Standalone Paper/Folia jar attached to this release
+
+          ## Runtime
+
+          - Java 21
+          - Paper `1.21.11`
+          - Folia-aware scheduling
+          - Pre-1.0 beta API
+
+          ## Published On Modrinth
+
+          The matching Modrinth build is available at:
+
+          https://modrinth.com/project/Ed95iBPq/version/GDTmQsIj
+          NOTES
+
+      - name: Create GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.release.outputs.version }}
+          PRERELEASE: ${{ steps.release.outputs.prerelease }}
+        run: |
+          artifacts=(
+            "lattice-core/build/libs/lattice-core-${VERSION}.jar"
+            "lattice-core/build/libs/lattice-core-${VERSION}-sources.jar"
+            "lattice-core/build/libs/lattice-core-${VERSION}-javadoc.jar"
+            "lattice-paper/build/libs/lattice-paper-${VERSION}.jar"
+            "lattice-paper/build/libs/lattice-paper-${VERSION}-sources.jar"
+            "lattice-paper/build/libs/lattice-paper-${VERSION}-javadoc.jar"
+            "lattice-paper/build/libs/lattice-paper-${VERSION}-standalone.jar"
+          )
+
+          release_flags=()
+          if [[ "${PRERELEASE}" == "true" ]]; then
+            release_flags+=(--prerelease)
+          fi
+
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release upload "${TAG}" "${artifacts[@]}" --clobber --repo "${GITHUB_REPOSITORY}"
+          else
+            gh release create "${TAG}" "${artifacts[@]}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --target "${GITHUB_SHA}" \
+              --title "Lattice ${VERSION}" \
+              --notes-file build/release/notes.md \
+              "${release_flags[@]}"
+          fi

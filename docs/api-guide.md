@@ -1,0 +1,333 @@
+# API Guide
+
+This guide covers the current Lattice API surface by package and subsystem.
+
+## Modules
+
+| Artifact | Purpose |
+| --- | --- |
+| `dev.beryl:lattice-core` | Platform-neutral runtime, API contracts, and base implementations. |
+| `dev.beryl:lattice-paper` | Paper/Folia bootstrap, command registration, scheduler routing, UI rendering, diagnostics, storage helpers, and optional integrations. |
+
+Depend on `lattice-paper` for Paper plugins. It brings `lattice-core` transitively.
+
+## Stable Core Packages
+
+| Package | Main Types | Use |
+| --- | --- | --- |
+| `dev.beryl.lattice` | `Lattice` | Framework metadata. |
+| `dev.beryl.lattice.api` | `StableApi`, `ExperimentalApi`, `InternalApi` | Source-visible API status markers. |
+| `dev.beryl.lattice.lifecycle` | `LatticeBuilder`, `LatticeRuntime`, `LatticeContext`, `LifecyclePhase`, `StartupReport` | Runtime construction, startup, phase transitions, service access, and shutdown. |
+| `dev.beryl.lattice.module` | `LatticeModule`, `ModuleDescriptor`, `ModuleId`, `ModuleDependency`, `ModuleGraph`, `ModuleManager` | Feature module declaration, dependency ordering, cycle checks, and enable/disable ordering. |
+| `dev.beryl.lattice.service` | `ServiceRegistry`, `ServiceKey`, `ServiceHandle`, `ServiceScope`, `CloseableService` | Typed service registration and lookup without global singletons. |
+| `dev.beryl.lattice.config` | `ConfigService`, `ConfigSpec`, `ConfigHandle`, `ConfigMigration`, `ConfigValidator`, `ReloadResult`, `YamlConfigService` | Typed Configurate YAML loading, defaults, validation, migration, saving, and reload. |
+| `dev.beryl.lattice.command` | `CommandService`, `CommandNode`, `CommandContext`, `CommandArgument`, `CommandSenderRef`, `CommandUsage` | Backend-neutral commands with permissions, parsing, usage, aliases, and Paper registration. |
+| `dev.beryl.lattice.text` | `TextService`, `MessageBundle`, `MessageKey`, `MiniMessageTemplate`, `LegacyText`, `AudienceRef` | Adventure-first text rendering, MiniMessage, message bundles, and legacy text boundaries. |
+| `dev.beryl.lattice.task` | `TaskService`, `TaskOwner`, `TaskContext`, `TaskContextType`, `TaskSchedule`, `TaskHandle`, `RegionRef`, `EntityRef` | Folia-aware async, global, region, and entity scheduling contracts. |
+| `dev.beryl.lattice.ui` | `UiService`, `UiScreen`, `UiPage`, `UiButton`, `UiIcon`, `BookViewSurface`, `AnvilTextInputSurface`, `VirtualSignTextInputSurface` | Platform-neutral inventory, book, anvil-input, and virtual-sign UI surfaces. |
+| `dev.beryl.lattice.ui.config` | `ConfiguredInventoryScreen`, `ConfiguredInventoryPage`, `ConfiguredInventoryButton`, `ConfiguredUiIcon`, `ConfiguredInventoryUiCompiler` | YAML-driven inventory screens compiled into `UiScreen`. |
+| `dev.beryl.lattice.storage` | `StorageService`, `StorageConfig`, `JdbcStorageConnection`, `JdbcMigrationRunner`, `SqlMigration`, `JdbcStatementExecutor`, `JdbcTransactionRunner` | SQLite, MySQL, MariaDB, PostgreSQL, migrations, transactions, pool health, and JDBC helpers. |
+| `dev.beryl.lattice.integration` | `IntegrationManager`, `IntegrationKey`, `Integration`, `IntegrationStatus`, `Capability`, `SimpleIntegration` | Optional plugin capability registration and lookup. |
+| `dev.beryl.lattice.diagnostics` | `DiagnosticService`, `DiagnosticSnapshot`, `DiagnosticFinding`, subsystem diagnostic records | Read-only runtime snapshots for support commands and health checks. |
+
+## Stable Paper Packages
+
+| Package | Main Types | Use |
+| --- | --- | --- |
+| `dev.beryl.lattice.paper.bootstrap` | `LatticePaperPlugin`, `LatticePaper`, `PaperServices`, `StandaloneLatticeBootstrap`, `StandaloneLatticePlugin` | Paper runtime bootstrap for shaded plugins and the standalone release jar. |
+| `dev.beryl.lattice.paper.config` | `PaperConfigPaths` | Paper data-directory path helpers. |
+| `dev.beryl.lattice.paper.storage` | `PaperAsyncStorageRunner`, `PaperStorageDefaults` | Async database execution and Paper storage defaults. |
+| `dev.beryl.lattice.paper.text` | `PaperAudiences` | Conversion and send helpers for Paper command senders and Adventure audiences. |
+| `dev.beryl.lattice.paper.integration` | `PaperIntegrations`, `PlaceholderApiService`, `PlaceholderExpansionSpec`, custom item services | Optional PlaceholderAPI, PacketEvents, Junction, Nexo, Oraxen, ItemsAdder, and CraftEngine bindings. |
+| `dev.beryl.lattice.paper.diagnostics` | `PaperDiagnosticRenderer` | Render diagnostics as Adventure components or plain lines. |
+
+Paper command, lifecycle, task, and UI implementation packages are internal. Use the stable core contracts instead of constructing Paper implementation classes directly.
+
+## Runtime Lifecycle
+
+`LatticeBuilder` collects modules and runtime customization. `LatticeRuntime` owns startup and shutdown:
+
+- `load()` registers and prepares modules.
+- `enable()` enables modules in dependency order.
+- `ready()` marks the runtime usable after platform startup.
+- `disable()` disables modules in reverse order and closes services.
+
+Use `LatticeContext` inside modules to access typed services:
+
+```java
+TextService text = context.require(LatticeRuntime.TEXT_SERVICE);
+CommandService commands = context.require(LatticeRuntime.COMMAND_SERVICE);
+```
+
+Default service keys on `LatticeRuntime`:
+
+- `TEXT_SERVICE`
+- `CONFIG_SERVICE`
+- `COMMAND_SERVICE`
+- `TASK_SERVICE`
+- `STORAGE_SERVICE`
+- `INTEGRATION_SERVICE`
+- `HOOK_SERVICE`
+- `UI_SERVICE`
+- `DIAGNOSTIC_SERVICE`
+
+## Modules And Services
+
+`LatticeModule` has a `ModuleDescriptor` and lifecycle hooks. Use `ModuleDependency.required(...)` or optional dependencies when a module must start after another module.
+
+```java
+@Override
+public ModuleDescriptor descriptor() {
+    return ModuleDescriptor.builder("shops")
+            .dependency(ModuleDependency.required(ModuleId.of("economy")))
+            .build();
+}
+```
+
+Use `ServiceKey<T>` for plugin services:
+
+```java
+public static final ServiceKey<UserRepository> USERS =
+        ServiceKey.of("example.users", UserRepository.class);
+
+context.services().register(USERS, repository, ServiceScope.MODULE);
+UserRepository users = context.require(USERS);
+```
+
+Services that implement `AutoCloseable` or `CloseableService` are closed during runtime shutdown when registered through the service registry.
+
+## Config
+
+Lattice config is typed and backed by Configurate YAML.
+
+```java
+ConfigHandle<MyConfig> handle = context.require(LatticeRuntime.CONFIG_SERVICE)
+        .load(ConfigSpec.builder(MyConfig.class, dataDirectory.resolve("config.yml"))
+                .schemaVersion(1)
+                .defaults(MyConfig::defaults)
+                .validator(config -> config.enabled()
+                        ? ConfigValidator.valid()
+                        : ConfigValidator.invalid("Plugin is disabled"))
+                .build());
+```
+
+Use `ConfigMigration<T>` for schema upgrades, `ConfigHandle#reload()` for owner-triggered reloads, and `ReloadResult` to report success or validation errors.
+
+When Junction is installed before the plugin loads, the Paper bootstrap installs a template-aware YAML service. Config files can contain variables such as `{{server}}`; unresolved variables fail loading unless a fallback is provided with `{{missing|fallback}}`.
+
+## Commands
+
+Declare commands with `CommandNode`; Paper registration is handled by the adapter.
+
+```java
+commands.register(CommandNode.command("example")
+        .description("Example command")
+        .permission("example.command")
+        .child(CommandNode.command("reload")
+                .permission("example.reload")
+                .executor(ctx -> {
+                    config.reload();
+                    ctx.replyPlain("Reloaded.");
+                })
+                .build())
+        .build());
+```
+
+Command permissions are cumulative along the resolved command path. Parser and usage failures are mapped to user-facing messages; unexpected executor failures are logged with command context.
+
+## Text
+
+Adventure `Component` is the message boundary. MiniMessage is the preferred owner-editable format.
+
+```java
+TextService text = context.require(LatticeRuntime.TEXT_SERVICE);
+Component title = text.miniMessage("<green>Example</green>");
+Component legacy = text.legacy("&aMigrated text");
+```
+
+Use `MessageBundle`, `MessageKey`, and `MessageRenderer` when a plugin has reusable message catalogs. Use `LegacyText` only at migration or compatibility boundaries.
+
+## Tasks
+
+Lattice makes Folia context explicit:
+
+```java
+TaskService tasks = context.require(LatticeRuntime.TASK_SERVICE);
+TaskOwner owner = new TaskOwner(context.runtimeId(), ModuleId.of("example"));
+
+TaskHandle handle = tasks.runRepeating(
+        owner,
+        TaskContext.async(),
+        TaskSchedule.seconds(5),
+        () -> refreshCache()
+);
+```
+
+Use async tasks for blocking or external work. Use entity or region contexts for player/world operations that must run on the correct Paper/Folia scheduler.
+
+## UI
+
+Declare UI in core types and let `lattice-paper` render it.
+
+```java
+UiService ui = context.require(LatticeRuntime.UI_SERVICE);
+UiOwner owner = new UiOwner(context.runtimeId(), ModuleId.of("example"));
+
+UiScreen screen = UiScreen.screen("menu", text.miniMessage("<green>Menu</green>"))
+        .rows(3)
+        .page(UiPage.page("main")
+                .button(UiButton.display(13, UiIcon.material("diamond")
+                        .name(text.miniMessage("<aqua>Status</aqua>"))))
+                .build())
+        .build();
+
+ui.open(owner, UiViewerRef.player(player.getUniqueId(), player.getName(), player.getWorld().getName()), screen);
+```
+
+Available surfaces:
+
+- `UiScreen` for inventory menus.
+- `BookViewSurface` for read-only books.
+- `AnvilTextInputSurface` for single-line input.
+- `VirtualSignTextInputSurface` for four-line Paper virtual sign input.
+
+Use `ConfiguredInventoryUiCompiler` when server owners should edit menus in YAML. Lattice compiles the shape; your plugin owns action semantics.
+
+Custom item icons can target Nexo, Oraxen, ItemsAdder, CraftEngine, or any registered custom provider, with a material fallback:
+
+```java
+UiIcon icon = UiIcon.nexo("menu_next")
+        .fallback(UiIcon.material("arrow"))
+        .name(text.miniMessage("<green>Next</green>"));
+```
+
+## Storage
+
+Use `StorageService` and `StorageConfig` for JDBC-backed data.
+
+```java
+StorageService storage = context.require(LatticeRuntime.STORAGE_SERVICE);
+
+try (StorageConnection connection = storage.connect(StorageConfig.sqlite(dataDirectory.resolve("data.db")))) {
+    new JdbcMigrationRunner().run(connection, List.of(SqlMigration.of(
+            "create-users",
+            1,
+            "create table users (id integer primary key autoincrement, name varchar(64) not null)"
+    )));
+
+    JdbcStatementExecutor sql = ((JdbcStorageConnection) connection).executor();
+    sql.update("save user", "insert into users (name) values (?)",
+            statement -> statement.setString(1, name));
+}
+```
+
+Supported providers:
+
+- `StorageProviderId.SQLITE`
+- `StorageProviderId.MYSQL`
+- `StorageProviderId.MARIADB`
+- `StorageProviderId.POSTGRESQL`
+
+SQLite enables WAL, foreign keys, and busy timeout defaults. Remote database configs should keep secrets out of logs by using `StorageConfig#redactedSummary()`.
+
+On Paper, use `PaperAsyncStorageRunner` to keep blocking JDBC work off region, entity, and global scheduler threads:
+
+```java
+PaperAsyncStorageRunner asyncStorage = new PaperAsyncStorageRunner(tasks, owner, plugin.getLogger());
+CompletableFuture<UserProfile> profile = asyncStorage.supply("load user", () -> repository.load(uuid));
+```
+
+## Integrations
+
+`IntegrationManager` exposes optional capabilities without hard dependencies.
+
+```java
+IntegrationManager integrations = context.require(LatticeRuntime.INTEGRATION_SERVICE);
+integrations.ifAvailable(PaperIntegrations.PLACEHOLDER_API, papi -> {
+    String expanded = papi.setPlaceholders(player, "Rank: %vault_rank%");
+});
+```
+
+Stable Paper integration keys:
+
+- `PaperIntegrations.PLACEHOLDER_API`
+- `PaperIntegrations.JUNCTION_VARIABLES`
+- `PaperIntegrations.PACKET_EVENTS`
+- `PaperIntegrations.NEXO_ITEMS`
+- `PaperIntegrations.ORAXEN_ITEMS`
+- `PaperIntegrations.ITEMSADDER_ITEMS`
+- `PaperIntegrations.CRAFTENGINE_ITEMS`
+- `PaperIntegrations.CUSTOM_ITEM_REGISTRY`
+
+Register PlaceholderAPI expansions through Lattice when your plugin owns placeholders:
+
+```java
+PlaceholderExpansionRegistration registration = integrations.requireService(PaperIntegrations.PLACEHOLDER_API)
+        .registerExpansion(PlaceholderExpansionSpec.builder("example")
+                .authors(plugin.getPluginMeta().getAuthors())
+                .version(plugin.getPluginMeta().getVersion())
+                .placeholder("status")
+                .handler((player, params) -> "ok")
+                .build());
+```
+
+Close returned registrations during module shutdown if your module owns them.
+
+## Diagnostics
+
+Diagnostics are read-only snapshots. Lattice does not add a global command; expose diagnostics through your plugin command if useful.
+
+```java
+DiagnosticService diagnostics = context.require(LatticeRuntime.DIAGNOSTIC_SERVICE);
+commands.register(CommandNode.command("example")
+        .child(CommandNode.command("diagnostics")
+                .permission("example.diagnostics")
+                .executor(command -> PaperDiagnosticRenderer.components(diagnostics.snapshot()).forEach(command::reply))
+                .build())
+        .build());
+```
+
+Snapshots include lifecycle, startup report, modules, services, integrations, commands, tasks, UI, and storage state.
+
+## Experimental APIs
+
+### Hooks
+
+`dev.beryl.lattice.hook` provides typed extension channels between plugins. The provider owns the contract interface and consumers publish implementations with `HookPriority`.
+
+```java
+public interface ExampleHook {
+    Component decorate(UUID playerId, Component current);
+}
+
+public static final HookKey<ExampleHook> EXAMPLE_HOOK =
+        new HookKey<>("example.decorate", ExampleHook.class);
+
+context.require(LatticeRuntime.HOOK_SERVICE)
+        .publish(EXAMPLE_HOOK, hook, HookPriority.NORMAL);
+```
+
+This API is experimental because cross-plugin classloading and load-order contracts need deliberate plugin design.
+
+### Templates
+
+`dev.beryl.lattice.template` and `dev.beryl.lattice.template.annotation` provide early generation and binding helpers:
+
+- `PluginTemplate`
+- `ModuleTemplate`
+- `TemplateCatalog`
+- `TemplateRenderer`
+- `BraceTemplateRenderer`
+- `TemplateVariables`
+- `@LatticePlugin`
+- `@LatticeModuleSpec`
+- `@LatticeCommandSpec`
+- `@LatticeConfig`
+- `@LatticeIntegrationSpec`
+- `@LatticeListener`
+
+Prefer explicit modules and service registration for production code until templates are promoted from experimental.
+
+## Internal APIs
+
+Do not depend on `dev.beryl.lattice.util` or Paper implementation packages such as `dev.beryl.lattice.paper.command`, `paper.task`, `paper.ui`, and `paper.lifecycle`. They exist so stable core contracts can run on Paper/Folia.

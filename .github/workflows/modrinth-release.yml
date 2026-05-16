@@ -1,0 +1,66 @@
+name: Modrinth Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish, without the leading v. Defaults to the Gradle property."
+        required: false
+      version_type:
+        description: "Modrinth version type."
+        required: true
+        default: beta
+        type: choice
+        options:
+          - beta
+          - alpha
+          - release
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish to Modrinth
+    runs-on: ubuntu-latest
+    env:
+      MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+      MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+      MODRINTH_VERSION_TYPE: ${{ inputs.version_type || 'beta' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          validate-wrappers: false
+
+      - name: Resolve release version
+        id: release
+        shell: bash
+        run: |
+          if [[ -n "${{ inputs.version }}" ]]; then
+            version="${{ inputs.version }}"
+          elif [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="$(grep '^latticeVersion=' gradle.properties | cut -d= -f2)"
+          fi
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build
+        run: ./gradlew --no-daemon -PlatticeVersion=${{ steps.release.outputs.version }} build
+
+      - name: Publish
+        run: ./gradlew --no-daemon -PlatticeVersion=${{ steps.release.outputs.version }} :lattice-paper:modrinth
