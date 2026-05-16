@@ -5,11 +5,6 @@ labels:
   - "type: bug"
   - "status: needs triage"
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thanks for taking the time to report a bug. Keep the report focused on what failed, how to reproduce it, and what version/environment produced it.
-
   - type: input
     id: summary
     attributes:
@@ -29,7 +24,7 @@ body:
         - lattice-core
         - standalone jar
         - documentation/example
-        - not sure
+        - unclear
     validations:
       required: true
 

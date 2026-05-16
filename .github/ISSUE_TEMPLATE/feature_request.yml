@@ -71,7 +71,7 @@ body:
         - Additive API, no breaking change expected
         - Behavior change, but no source break expected
         - Breaking API change may be needed
-        - Not sure
+        - Unclear
     validations:
       required: true
 

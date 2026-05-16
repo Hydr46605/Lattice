@@ -25,7 +25,7 @@ body:
         - Confusing explanation
         - Broken link
         - Example does not compile
-        - Other
+        - Unlisted docs issue
     validations:
       required: true
 

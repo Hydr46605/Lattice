@@ -110,6 +110,6 @@ Modules own their config, commands, tasks, storage, UI, and service registration
 
 ## Current Status
 
-Lattice is being hardened against real Beryl plugin integrations. The default deployment model is shaded library usage: each dependent plugin owns its own Lattice runtime, module graph, service registry, task tracking, storage handles, and diagnostics surface.
+Lattice is a pre-1.0 beta framework. The default deployment model is shaded library usage: each dependent plugin owns its own Lattice runtime, module graph, service registry, task tracking, storage handles, and diagnostics surface.
 
 Release builds also attach a standalone Paper/Folia jar for distribution channels that need a server-installable artifact.

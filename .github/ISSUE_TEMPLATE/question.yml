@@ -35,7 +35,7 @@ body:
         - Paper adapter
         - build/release
         - docs
-        - not sure
+        - unclear
     validations:
       required: true
 
