@@ -1,0 +1,74 @@
+name: Question Or Support
+description: Ask about using Lattice when the guides do not answer it.
+title: "[Question]: "
+labels:
+  - "type: question"
+  - "status: needs triage"
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What are you trying to build or understand?
+      placeholder: "I want to use Lattice storage from a Paper module..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - lifecycle
+        - modules
+        - services
+        - config
+        - commands
+        - text
+        - tasks/scheduling
+        - UI
+        - storage
+        - integrations
+        - hooks/templates
+        - diagnostics
+        - Paper adapter
+        - build/release
+        - docs
+        - not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What You Tried
+      description: Include code, config, Gradle setup, or docs you already checked.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Lattice Version
+      placeholder: "0.7.1"
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any server version, plugin setup, logs, or constraints that matter.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I checked the README and developer guide first.
+          required: true
+        - label: This is about using Lattice, not general Java/Paper support.
+          required: true

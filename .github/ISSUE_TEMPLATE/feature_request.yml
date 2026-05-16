@@ -1,0 +1,86 @@
+name: Feature Request
+description: Propose a new API, integration, adapter, or behavior.
+title: "[Feature]: "
+labels:
+  - "type: feature"
+  - "status: needs triage"
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What plugin authoring problem would this solve?
+      placeholder: "When building a Paper plugin with Lattice, I need..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - lifecycle
+        - modules
+        - services
+        - config
+        - commands
+        - text
+        - tasks/scheduling
+        - UI
+        - storage
+        - integrations
+        - hooks/templates
+        - diagnostics
+        - Paper adapter
+        - build/release
+        - docs
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution
+      description: Describe the API, behavior, or workflow you want.
+    validations:
+      required: true
+
+  - type: textarea
+    id: example
+    attributes:
+      label: Example Usage
+      description: Show what plugin code or config could look like.
+      render: java
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What can plugin authors do today, and why is it not enough?
+    validations:
+      required: false
+
+  - type: dropdown
+    id: compatibility
+    attributes:
+      label: Compatibility Impact
+      options:
+        - Additive API, no breaking change expected
+        - Behavior change, but no source break expected
+        - Breaking API change may be needed
+        - Not sure
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues first.
+          required: true
+        - label: This request is in scope for a framework/library, not a gameplay feature.
+          required: true

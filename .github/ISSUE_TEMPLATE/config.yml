@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Modrinth project
+    url: https://modrinth.com/project/Ed95iBPq
+    about: Use Modrinth for release downloads and project metadata.
+  - name: Developer guide
+    url: https://github.com/Hydr46605/Lattice/blob/main/docs/README.md
+    about: Read the current setup and API guide before opening usage questions.

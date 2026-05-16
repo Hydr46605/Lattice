@@ -1,0 +1,54 @@
+name: Documentation Issue
+description: Report missing, confusing, stale, or incorrect documentation.
+title: "[Docs]: "
+labels:
+  - "type: docs"
+  - "area: docs"
+  - "status: needs triage"
+body:
+  - type: input
+    id: page
+    attributes:
+      label: Page Or Section
+      description: Link or name the README/guide/API section.
+      placeholder: "docs/api-guide.md#storage"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Issue Type
+      options:
+        - Missing information
+        - Incorrect information
+        - Confusing explanation
+        - Broken link
+        - Example does not compile
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: What should be changed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Wording Or Example
+      description: Optional draft text, snippet, or outline.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I checked the current README and docs directory first.
+          required: true
