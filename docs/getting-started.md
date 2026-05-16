@@ -43,7 +43,7 @@ Depend on the Paper adapter:
 
 ```kotlin
 dependencies {
-    implementation("dev.beryl:lattice-paper:0.7.1")
+    implementation("dev.beryl:lattice-paper:0.7.2")
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
 }
 ```

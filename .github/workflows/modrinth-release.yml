@@ -62,5 +62,14 @@ jobs:
       - name: Build
         run: ./gradlew --no-daemon -PlatticeVersion=${{ steps.release.outputs.version }} build
 
+      - name: Check release notes
+        shell: bash
+        run: |
+          notes_file="docs/release-notes/${{ steps.release.outputs.version }}.md"
+          if [[ ! -f "${notes_file}" ]]; then
+            echo "::error::Missing release notes: ${notes_file}"
+            exit 1
+          fi
+
       - name: Publish
         run: ./gradlew --no-daemon -PlatticeVersion=${{ steps.release.outputs.version }} :lattice-paper:modrinth

@@ -85,27 +85,20 @@ jobs:
           VERSION: ${{ steps.release.outputs.version }}
         run: |
           mkdir -p build/release
-          cat > build/release/notes.md <<NOTES
-          Initial Lattice framework release.
+          notes_file="docs/release-notes/${VERSION}.md"
+          if [[ ! -f "${notes_file}" ]]; then
+            echo "::error::Missing release notes: ${notes_file}"
+            exit 1
+          fi
+
+          cp "${notes_file}" build/release/notes.md
+          cat >> build/release/notes.md <<NOTES
 
           ## Artifacts
 
           - GitHub Packages: \`dev.beryl:lattice-core:${VERSION}\`
           - GitHub Packages: \`dev.beryl:lattice-paper:${VERSION}\`
           - Standalone Paper/Folia jar attached to this release
-
-          ## Runtime
-
-          - Java 21
-          - Paper `1.21.11`
-          - Folia-aware scheduling
-          - Pre-1.0 beta API
-
-          ## Published On Modrinth
-
-          The matching Modrinth build is available at:
-
-          https://modrinth.com/project/Ed95iBPq/version/GDTmQsIj
           NOTES
 
       - name: Create GitHub release

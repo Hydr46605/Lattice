@@ -19,8 +19,10 @@ dependencies {
 val sourceSets = extensions.getByType<SourceSetContainer>()
 val runtimeClasspath = configurations.runtimeClasspath
 val standalonePluginDescriptor = layout.buildDirectory.file("generated/standalone/paper-plugin.yml")
+val releaseNotes = rootProject.layout.projectDirectory.file("docs/release-notes/${project.version}.md")
 
 val generateStandalonePluginDescriptor by tasks.registering {
+    inputs.property("version", project.version.toString())
     outputs.file(standalonePluginDescriptor)
     doLast {
         val descriptor = standalonePluginDescriptor.get().asFile
@@ -36,6 +38,7 @@ val generateStandalonePluginDescriptor by tasks.registering {
             authors:
               - BerylLabs
             """.trimIndent()
+                + "\n"
         )
     }
 }
@@ -63,6 +66,7 @@ modrinth {
     projectId.set(providers.environmentVariable("MODRINTH_PROJECT_ID"))
     versionNumber.set(project.version.toString())
     versionName.set("Lattice ${project.version}")
+    changelog.set(providers.fileContents(releaseNotes).asText)
     versionType.set(providers.environmentVariable("MODRINTH_VERSION_TYPE").orElse("beta"))
     uploadFile.set(standaloneJar)
     gameVersions.addAll("1.21.11")
@@ -71,5 +75,6 @@ modrinth {
 }
 
 tasks.named("modrinth") {
+    inputs.file(releaseNotes)
     dependsOn(standaloneJar)
 }

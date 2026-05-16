@@ -14,7 +14,7 @@ Most Paper plugins should depend on `lattice-paper`; it brings `lattice-core` tr
 
 ```kotlin
 dependencies {
-    implementation("dev.beryl:lattice-paper:0.7.1")
+    implementation("dev.beryl:lattice-paper:0.7.2")
 }
 ```
 
@@ -22,7 +22,7 @@ Use `lattice-core` directly only for platform-neutral libraries or tests that in
 
 ```kotlin
 dependencies {
-    implementation("dev.beryl:lattice-core:0.7.1")
+    implementation("dev.beryl:lattice-core:0.7.2")
 }
 ```
 

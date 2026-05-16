@@ -74,6 +74,7 @@ public final class PaperUiService implements UiService, Listener {
     private final PaperAnvilTextInputRenderer anvilRenderer;
     private final PaperVirtualSignTextInputRenderer virtualSignRenderer = new PaperVirtualSignTextInputRenderer();
     private final PlainTextComponentSerializer plainText = PlainTextComponentSerializer.plainText();
+    private boolean eventHandlersRegistered;
 
     public PaperUiService(JavaPlugin plugin, TaskService tasks, IntegrationManager integrations) {
         this.plugin = Preconditions.requireNonNull(plugin, "plugin");
@@ -82,9 +83,7 @@ public final class PaperUiService implements UiService, Listener {
         this.iconRenderer = new PaperUiIconRenderer(integrations);
         this.inventoryRenderer = new PaperInventorySurfaceRenderer(iconRenderer);
         this.anvilRenderer = new PaperAnvilTextInputRenderer(iconRenderer);
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-        registerProviderRefreshEvents();
-        registerVirtualSignChangeHandler();
+        registerEventHandlersIfEnabled();
     }
 
     @Override
@@ -107,7 +106,7 @@ public final class PaperUiService implements UiService, Listener {
         Preconditions.requireNonNull(owner, "owner");
         Preconditions.requireNonNull(viewer, "viewer");
         Preconditions.requireNonNull(surface, "surface");
-        registerProviderRefreshEvents();
+        registerEventHandlersIfEnabled();
 
         Optional<Player> player = player(viewer);
         if (player.isEmpty()) {
@@ -196,7 +195,10 @@ public final class PaperUiService implements UiService, Listener {
     @Override
     public void close() {
         closeAll();
-        HandlerList.unregisterAll(this);
+        if (eventHandlersRegistered) {
+            HandlerList.unregisterAll(this);
+            eventHandlersRegistered = false;
+        }
     }
 
     void refresh(PaperUiSession session) {
@@ -516,6 +518,16 @@ public final class PaperUiService implements UiService, Listener {
         registerRefreshEvent("com.nexomc.nexo.api.events.NexoItemsLoadedEvent", CustomItemRegistry.NEXO);
         registerRefreshEvent("dev.lone.itemsadder.api.Events.ItemsAdderLoadDataEvent", CustomItemRegistry.ITEMSADDER);
         registerRefreshEvent("net.momirealms.craftengine.bukkit.api.event.CraftEngineReloadEvent", CustomItemRegistry.CRAFTENGINE);
+    }
+
+    private void registerEventHandlersIfEnabled() {
+        if (eventHandlersRegistered || !plugin.isEnabled()) {
+            return;
+        }
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        eventHandlersRegistered = true;
+        registerProviderRefreshEvents();
+        registerVirtualSignChangeHandler();
     }
 
     private void registerRefreshEvent(String className, String providerId) {

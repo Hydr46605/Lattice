@@ -5,33 +5,26 @@ import dev.beryl.lattice.paper.integration.PaperIntegrationBootstrap;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class StandaloneLatticePlugin extends JavaPlugin {
-    private LatticeRuntime runtime;
+    private final PaperRuntimeLifecycle lifecycle = new PaperRuntimeLifecycle(() -> StandaloneLatticeBootstrap.create(this, builder -> {
+    }));
 
     @Override
     public void onLoad() {
-        runtime = StandaloneLatticeBootstrap.create(this, builder -> {
-        });
-        runtime.load();
+        lifecycle.load();
     }
 
     @Override
     public void onEnable() {
-        runtime().context().find(LatticeRuntime.INTEGRATION_SERVICE)
-                .ifPresent(integrations -> PaperIntegrationBootstrap.registerDefaults(this, integrations));
-        runtime().enable();
+        lifecycle.enable(this::registerDefaultIntegrations);
     }
 
     @Override
     public void onDisable() {
-        if (runtime != null) {
-            runtime.disable();
-        }
+        lifecycle.disable();
     }
 
-    private LatticeRuntime runtime() {
-        if (runtime == null) {
-            throw new IllegalStateException("Lattice runtime has not been created yet");
-        }
-        return runtime;
+    private void registerDefaultIntegrations(LatticeRuntime runtime) {
+        runtime.context().find(LatticeRuntime.INTEGRATION_SERVICE)
+                .ifPresent(integrations -> PaperIntegrationBootstrap.registerDefaults(this, integrations));
     }
 }
