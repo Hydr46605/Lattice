@@ -16,5 +16,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "lattice"
 
+include("lattice-api")
 include("lattice-core")
 include("lattice-paper")

@@ -60,7 +60,10 @@ class ApiStatusCoverageTest {
         List<ApiType> types = publicTypes();
 
         assertTypeStatus(types, "dev.beryl.lattice.paper.bootstrap.LatticePaper", ApiStatus.STABLE);
+        assertTypeStatus(types, "dev.beryl.lattice.paper.bootstrap.LatticeHost", ApiStatus.STABLE);
+        assertTypeStatus(types, "dev.beryl.lattice.paper.bootstrap.LatticeHostProvider", ApiStatus.STABLE);
         assertTypeStatus(types, "dev.beryl.lattice.paper.bootstrap.LatticePaperPlugin", ApiStatus.STABLE);
+        assertTypeStatus(types, "dev.beryl.lattice.paper.bootstrap.LatticePluginHandle", ApiStatus.STABLE);
         assertTypeStatus(types, "dev.beryl.lattice.paper.bootstrap.PaperServices", ApiStatus.STABLE);
         assertTypeStatus(types, "dev.beryl.lattice.paper.bootstrap.StandaloneLatticeBootstrap", ApiStatus.STABLE);
         assertTypeStatus(types, "dev.beryl.lattice.paper.diagnostics.PaperDiagnosticRenderer", ApiStatus.STABLE);
@@ -91,6 +94,7 @@ class ApiStatusCoverageTest {
     private static List<ApiType> publicTypes() throws IOException {
         Path root = repositoryRoot();
         List<Path> sourceRoots = List.of(
+                root.resolve("lattice-api/src/main/java"),
                 root.resolve("lattice-core/src/main/java"),
                 root.resolve("lattice-paper/src/main/java")
         );

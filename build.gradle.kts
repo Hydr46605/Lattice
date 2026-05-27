@@ -35,6 +35,7 @@ subprojects {
                     name.set(project.name)
                     description.set(
                         when (project.name) {
+                            "lattice-api" -> "Stable Lattice authoring contracts and API status markers."
                             "lattice-core" -> "Platform-neutral Lattice APIs and runtime services."
                             "lattice-paper" -> "Paper and Folia adapter APIs for Lattice-powered plugins."
                             else -> "Lattice framework artifact."

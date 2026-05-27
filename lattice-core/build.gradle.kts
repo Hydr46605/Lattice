@@ -1,4 +1,5 @@
 dependencies {
+    api(project(":lattice-api"))
     api(platform("net.kyori:adventure-bom:4.26.1"))
     api("net.kyori:adventure-api")
     api("net.kyori:adventure-text-minimessage")
