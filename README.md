@@ -15,7 +15,7 @@
 <p align="center">
   <img alt="Java 21" src="https://img.shields.io/badge/Java-21-orange">
   <img alt="Paper 1.21.11" src="https://img.shields.io/badge/Paper-1.21.11-2ea44f">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.8.0-blue">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.8.1-blue">
   <img alt="Status" src="https://img.shields.io/badge/API-pre--1.0_beta-yellow">
 </p>
 
@@ -68,25 +68,16 @@ The framework gives plugin projects a clear structure from the first class:
 
 ## Quick Start
 
-Install the standalone `Lattice` plugin on the server and compile your plugin against the Paper adapter from GitHub Packages:
+Install the standalone `Lattice` plugin on the server and compile your plugin against the Paper adapter from Maven Central:
 
 ```kotlin
 repositories {
-    maven("https://maven.pkg.github.com/hydr46605/Lattice") {
-        name = "GitHubPackages"
-        credentials {
-            username = providers.gradleProperty("gpr.user")
-                .orElse(providers.environmentVariable("GITHUB_ACTOR"))
-                .get()
-            password = providers.gradleProperty("gpr.key")
-                .orElse(providers.environmentVariable("GITHUB_TOKEN"))
-                .get()
-        }
-    }
+    mavenCentral()
+    maven("https://repo.papermc.io/repository/maven-public/")
 }
 
 dependencies {
-    compileOnly("dev.beryl:lattice-paper:0.8.0")
+    compileOnly("dev.beryl:lattice-paper:0.8.1")
 }
 ```
 

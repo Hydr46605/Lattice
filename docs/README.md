@@ -4,17 +4,17 @@ Lattice is a Java 21 framework for building structured Paper/Folia plugins. The 
 
 ## Guide
 
-- [Getting Started](getting-started.md) - install from GitHub Packages, create a Lattice-powered Paper plugin, and register your first module.
+- [Getting Started](getting-started.md) - install from Maven Central, create a Lattice-powered Paper plugin, and register your first module.
 - [API Guide](api-guide.md) - lifecycle, modules, services, config, commands, text, tasks, UI, storage, integrations, hooks, templates, diagnostics, and Paper adapter APIs.
-- [Build And Release](build-and-release.md) - local build commands, GitHub Packages publishing, GitHub Releases, and Modrinth release workflow usage.
+- [Build And Release](build-and-release.md) - local build commands, Maven Central publishing, GitHub Packages mirroring, GitHub Releases, and Modrinth release workflow usage.
 
 ## Coordinates
 
-For shared-runtime mode, install the standalone `Lattice` plugin on the server, compile dependent plugins with `compileOnly("dev.beryl:lattice-paper:0.8.0")`, and declare a hard Paper dependency with `join-classpath: true`.
+For shared-runtime mode, install the standalone `Lattice` plugin on the server, compile dependent plugins with `compileOnly("dev.beryl:lattice-paper:0.8.1")`, and declare a hard Paper dependency with `join-classpath: true`.
 
 ```kotlin
 dependencies {
-    compileOnly("dev.beryl:lattice-paper:0.8.0")
+    compileOnly("dev.beryl:lattice-paper:0.8.1")
 }
 ```
 
@@ -22,10 +22,10 @@ Use `lattice-core` directly only for platform-neutral libraries or tests that in
 
 ```kotlin
 dependencies {
-    implementation("dev.beryl:lattice-core:0.8.0")
+    implementation("dev.beryl:lattice-core:0.8.1")
 }
 ```
 
-GitHub Packages requires authentication for Gradle consumption. See [Getting Started](getting-started.md#install-from-github-packages) for the complete repository block.
+Maven Central is the primary public Maven source. GitHub Packages remains available as an authenticated mirror for maintainers and fallback builds.
 
-For legacy isolated mode, shade `dev.beryl:lattice-paper:0.8.0` into the dependent plugin and do not expect shared pools or aggregate diagnostics.
+For legacy isolated mode, shade `dev.beryl:lattice-paper:0.8.1` into the dependent plugin and do not expect shared pools or aggregate diagnostics.

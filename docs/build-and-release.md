@@ -28,13 +28,45 @@ Build the standalone Paper/Folia jar used for release attachments and Modrinth:
 ./gradlew :lattice-paper:standaloneJar
 ```
 
-## GitHub Packages
+## Maven Central
 
-The Gradle build publishes all Maven modules to GitHub Packages:
+The primary public Maven publication target is Maven Central:
 
-- `dev.beryl:lattice-api:0.8.0`
-- `dev.beryl:lattice-core:0.8.0`
-- `dev.beryl:lattice-paper:0.8.0`
+- `dev.beryl:lattice-api:0.8.1`
+- `dev.beryl:lattice-core:0.8.1`
+- `dev.beryl:lattice-paper:0.8.1`
+
+The `dev.beryl` namespace must be verified in the Sonatype Central Portal before the first Maven Central release. Central publication also requires Apache-2.0 license metadata and signed artifacts.
+
+The release workflow needs these repository secrets:
+
+- `MAVEN_CENTRAL_USERNAME`
+- `MAVEN_CENTRAL_PASSWORD`
+- `SIGNING_IN_MEMORY_KEY`
+- `SIGNING_IN_MEMORY_KEY_PASSWORD`
+- optional `SIGNING_IN_MEMORY_KEY_ID`
+
+Generate the in-memory signing key from the maintainer GPG key with:
+
+```bash
+gpg --export-secret-keys --armor <key-id>
+```
+
+The release workflow maps those secrets to the Gradle properties consumed by the Maven publishing plugin and runs:
+
+```bash
+./gradlew publishAndReleaseToMavenCentral
+```
+
+Central releases are immutable. If a release upload succeeds but validation fails, fix the project and release a new version instead of reusing the same version.
+
+## GitHub Packages Mirror
+
+The Gradle build also publishes all Maven modules to GitHub Packages as a permanent authenticated mirror:
+
+- `dev.beryl:lattice-api:0.8.1`
+- `dev.beryl:lattice-core:0.8.1`
+- `dev.beryl:lattice-paper:0.8.1`
 
 Publication uses the `GitHubPackages` Maven repository:
 
@@ -50,17 +82,17 @@ permissions:
   packages: write
 ```
 
-Manual local publishing requires a token with package write access:
+Manual local mirror publishing requires a token with package write access:
 
 ```bash
 GITHUB_ACTOR=YourGitHubUsername \
 GITHUB_TOKEN=YourClassicTokenWithWritePackages \
-./gradlew publish
+./gradlew publishAllPublicationsToGitHubPackagesRepository
 ```
 
 ## GitHub Release
 
-The `GitHub Release` workflow builds, publishes Maven packages, and creates or updates a GitHub Release with:
+The `GitHub Release` workflow builds, publishes Maven packages to Maven Central and the GitHub Packages mirror, then creates or updates a GitHub Release with:
 
 - `lattice-api` jar
 - `lattice-api` sources jar
@@ -78,15 +110,15 @@ Run it manually for a controlled release:
 ```bash
 gh workflow run "GitHub Release" \
   --repo Hydr46605/Lattice \
-  -f version=0.8.0 \
+  -f version=0.8.1 \
   -f prerelease=true
 ```
 
 Or publish by pushing a version tag:
 
 ```bash
-git tag v0.8.0
-git push origin v0.8.0
+git tag v0.8.1
+git push origin v0.8.1
 ```
 
 The release workflow checks that the requested version matches `latticeVersion` in `gradle.properties`.
@@ -103,7 +135,7 @@ Run it manually when the Modrinth version should be published separately:
 ```bash
 gh workflow run "Modrinth Release" \
   --repo Hydr46605/Lattice \
-  -f version=0.8.0 \
+  -f version=0.8.1 \
   -f version_type=beta
 ```
 

@@ -10,7 +10,7 @@ This guide covers the current Lattice API surface by package and subsystem.
 | `dev.beryl:lattice-core` | Platform-neutral runtime, API contracts, and base implementations. |
 | `dev.beryl:lattice-paper` | Paper/Folia bootstrap, command registration, scheduler routing, UI rendering, diagnostics, storage helpers, optional integrations, and standalone host. |
 
-Use `compileOnly("dev.beryl:lattice-paper:0.8.0")` for shared-runtime Paper plugins. Use `implementation("dev.beryl:lattice-paper:0.8.0")` only for legacy isolated jars that intentionally shade Lattice.
+Use `compileOnly("dev.beryl:lattice-paper:0.8.1")` for shared-runtime Paper plugins. Use `implementation("dev.beryl:lattice-paper:0.8.1")` only for legacy isolated jars that intentionally shade Lattice.
 
 ## Stable Core Packages
 
