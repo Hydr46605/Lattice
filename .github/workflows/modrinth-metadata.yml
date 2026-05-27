@@ -1,0 +1,75 @@
+name: Modrinth Project Metadata
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Sync project description
+    runs-on: ubuntu-latest
+    env:
+      MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+      MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Check Modrinth credentials
+        run: |
+          if [ -z "$MODRINTH_PROJECT_ID" ]; then
+            echo "MODRINTH_PROJECT_ID repository variable is not set." >&2
+            exit 1
+          fi
+
+          if [ -z "$MODRINTH_TOKEN" ]; then
+            echo "MODRINTH_TOKEN repository secret is not set." >&2
+            exit 1
+          fi
+
+      - name: Sync description
+        run: |
+          summary="$(cat docs/modrinth-summary.txt)"
+          body="$(cat docs/modrinth-description.md)"
+          payload="$RUNNER_TEMP/modrinth-project.json"
+          response="$RUNNER_TEMP/modrinth-response.txt"
+          readback="$RUNNER_TEMP/modrinth-readback.json"
+
+          jq -n \
+            --arg description "$summary" \
+            --arg body "$body" \
+            '{description: $description, body: $body}' > "$payload"
+
+          status_code="$(
+            curl --silent --show-error \
+              --output "$response" \
+              --write-out "%{http_code}" \
+              --request PATCH \
+              "https://api.modrinth.com/v2/project/${MODRINTH_PROJECT_ID}" \
+              --header "Authorization: ${MODRINTH_TOKEN}" \
+              --header "User-Agent: BerylLabs/Lattice metadata sync (github-actions)" \
+              --header "Content-Type: application/json" \
+              --data-binary "@$payload"
+          )"
+
+          if [ "$status_code" != "204" ]; then
+            echo "Modrinth metadata update failed with HTTP $status_code." >&2
+            cat "$response" >&2
+            exit 1
+          fi
+
+          curl --fail --silent --show-error \
+            --output "$readback" \
+            --header "User-Agent: BerylLabs/Lattice metadata sync (github-actions)" \
+            "https://api.modrinth.com/v2/project/${MODRINTH_PROJECT_ID}"
+
+          jq -e \
+            --arg description "$summary" \
+            --arg body "$body" \
+            '.description == $description and .body == $body' \
+            "$readback" >/dev/null
+
+          jq -r '"Synced Modrinth metadata for " + .title + " (" + .slug + ")."' "$readback"

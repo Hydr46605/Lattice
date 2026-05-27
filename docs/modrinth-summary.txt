@@ -1,0 +1,1 @@
+A Java 21 shared runtime and framework for structured Paper/Folia plugin development.

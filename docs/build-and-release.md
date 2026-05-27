@@ -110,3 +110,19 @@ gh workflow run "Modrinth Release" \
 The workflow should be run only once for each Modrinth version.
 
 Modrinth changelogs are read from `docs/release-notes/<version>.md`. Add that file before running either release workflow.
+
+## Modrinth Project Metadata
+
+The Modrinth project summary and long description are tracked in:
+
+- `docs/modrinth-summary.txt`
+- `docs/modrinth-description.md`
+
+After editing those files, sync the live Modrinth project page with:
+
+```bash
+gh workflow run "Modrinth Project Metadata" \
+  --repo Hydr46605/Lattice
+```
+
+The workflow uses the same `MODRINTH_PROJECT_ID` repository variable and `MODRINTH_TOKEN` repository secret as the release workflow, then reads the project back from Modrinth to verify the update.
