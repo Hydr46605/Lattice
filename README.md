@@ -15,7 +15,7 @@
 <p align="center">
   <img alt="Java 21" src="https://img.shields.io/badge/Java-21-orange">
   <img alt="Paper 1.21.11" src="https://img.shields.io/badge/Paper-1.21.11-2ea44f">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.7.2-blue">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.8.0-blue">
   <img alt="Status" src="https://img.shields.io/badge/API-pre--1.0_beta-yellow">
 </p>
 
@@ -32,7 +32,7 @@
 
 ## What Is Lattice?
 
-Lattice is the shared foundation for BerylStudios and BerylLabs Minecraft plugins. It is not a gameplay plugin and it does not add commands, features, worlds, or mechanics by itself. Instead, plugin authors shade or depend on `lattice-paper` and build their own plugin features on top of a consistent runtime.
+Lattice is the shared foundation for BerylStudios and BerylLabs Minecraft plugins. It is not a gameplay plugin and it does not add commands, features, worlds, or mechanics by itself. Plugin authors can install Lattice as a standalone Paper/Folia host for shared runtime infrastructure, or use the legacy isolated library mode when a self-contained jar is required.
 
 The framework gives plugin projects a clear structure from the first class:
 
@@ -68,7 +68,7 @@ The framework gives plugin projects a clear structure from the first class:
 
 ## Quick Start
 
-Install the Paper adapter from GitHub Packages:
+Install the standalone `Lattice` plugin on the server and compile your plugin against the Paper adapter from GitHub Packages:
 
 ```kotlin
 repositories {
@@ -86,7 +86,7 @@ repositories {
 }
 
 dependencies {
-    implementation("dev.beryl:lattice-paper:0.7.2")
+    compileOnly("dev.beryl:lattice-paper:0.8.0")
 }
 ```
 
@@ -111,8 +111,8 @@ Modules own their config, commands, tasks, storage, UI, and service registration
 
 ## Current Status
 
-Lattice is a pre-1.0 beta framework. The legacy deployment model is shaded library usage: each dependent plugin owns its own Lattice runtime, module graph, service registry, task tracking, storage handles, and diagnostics surface.
+Lattice is a pre-1.0 beta framework. The preferred 0.8 deployment model is the standalone shared runtime: the server installs the `Lattice` plugin, dependent plugins compile against Lattice without relocation, and Paper loads the shared classes through an explicit dependency.
 
 Release builds also attach a standalone Paper/Folia jar for distribution channels that need a server-installable artifact.
 
-The 1.0 architecture is moving toward a standalone shared-runtime model. In that mode the server installs the `Lattice` plugin, dependent plugins compile against Lattice without shading it, and Paper loads the shared classes through an explicit dependency. The standalone host then owns shared infrastructure such as JDBC pools and aggregate diagnostics while each dependent plugin keeps its own module lifecycle and data folder.
+Legacy shaded library usage remains supported for compatibility. In that mode each dependent plugin owns its own Lattice runtime, module graph, service registry, task tracking, storage handles, and diagnostics surface.

@@ -96,6 +96,7 @@ jobs:
 
           ## Artifacts
 
+          - GitHub Packages: \`dev.beryl:lattice-api:${VERSION}\`
           - GitHub Packages: \`dev.beryl:lattice-core:${VERSION}\`
           - GitHub Packages: \`dev.beryl:lattice-paper:${VERSION}\`
           - Standalone Paper/Folia jar attached to this release
@@ -110,6 +111,9 @@ jobs:
           PRERELEASE: ${{ steps.release.outputs.prerelease }}
         run: |
           artifacts=(
+            "lattice-api/build/libs/lattice-api-${VERSION}.jar"
+            "lattice-api/build/libs/lattice-api-${VERSION}-sources.jar"
+            "lattice-api/build/libs/lattice-api-${VERSION}-javadoc.jar"
             "lattice-core/build/libs/lattice-core-${VERSION}.jar"
             "lattice-core/build/libs/lattice-core-${VERSION}-sources.jar"
             "lattice-core/build/libs/lattice-core-${VERSION}-javadoc.jar"

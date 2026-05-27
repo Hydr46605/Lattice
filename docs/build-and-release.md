@@ -30,10 +30,11 @@ Build the standalone Paper/Folia jar used for release attachments and Modrinth:
 
 ## GitHub Packages
 
-The Gradle build publishes both modules to GitHub Packages:
+The Gradle build publishes all Maven modules to GitHub Packages:
 
-- `dev.beryl:lattice-core:0.7.2`
-- `dev.beryl:lattice-paper:0.7.2`
+- `dev.beryl:lattice-api:0.8.0`
+- `dev.beryl:lattice-core:0.8.0`
+- `dev.beryl:lattice-paper:0.8.0`
 
 Publication uses the `GitHubPackages` Maven repository:
 
@@ -61,6 +62,9 @@ GITHUB_TOKEN=YourClassicTokenWithWritePackages \
 
 The `GitHub Release` workflow builds, publishes Maven packages, and creates or updates a GitHub Release with:
 
+- `lattice-api` jar
+- `lattice-api` sources jar
+- `lattice-api` Javadoc jar
 - `lattice-core` jar
 - `lattice-core` sources jar
 - `lattice-core` Javadoc jar
@@ -74,15 +78,15 @@ Run it manually for a controlled release:
 ```bash
 gh workflow run "GitHub Release" \
   --repo Hydr46605/Lattice \
-  -f version=0.7.2 \
+  -f version=0.8.0 \
   -f prerelease=true
 ```
 
 Or publish by pushing a version tag:
 
 ```bash
-git tag v0.7.2
-git push origin v0.7.2
+git tag v0.8.0
+git push origin v0.8.0
 ```
 
 The release workflow checks that the requested version matches `latticeVersion` in `gradle.properties`.
@@ -99,7 +103,7 @@ Run it manually when the Modrinth version should be published separately:
 ```bash
 gh workflow run "Modrinth Release" \
   --repo Hydr46605/Lattice \
-  -f version=0.7.2 \
+  -f version=0.8.0 \
   -f version_type=beta
 ```
 

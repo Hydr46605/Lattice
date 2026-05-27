@@ -39,22 +39,11 @@ gpr.user=YourGitHubUsername
 gpr.key=YourClassicTokenWithReadPackages
 ```
 
-For legacy isolated mode, depend on the Paper adapter and shade it into your plugin:
+For the shared-runtime path, install the standalone `Lattice` plugin in the server `plugins/` folder and compile against Lattice without shading or relocating it:
 
 ```kotlin
 dependencies {
-    implementation("dev.beryl:lattice-paper:0.7.2")
-    compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
-}
-```
-
-Paper plugin jars normally need their runtime libraries shaded or otherwise provided. If your plugin shades dependencies, include `lattice-paper`; `lattice-core` is transitive.
-
-For the 1.0 shared-runtime path, install the standalone `Lattice` plugin in the server `plugins/` folder and compile against Lattice without shading or relocating it:
-
-```kotlin
-dependencies {
-    compileOnly("dev.beryl:lattice-paper:0.7.2")
+    compileOnly("dev.beryl:lattice-paper:0.8.0")
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
 }
 ```
@@ -76,6 +65,8 @@ dependencies:
 ```
 
 Do not relocate `dev.beryl.lattice` in shared-runtime mode. If a plugin declares a hard `Lattice` dependency but still loads an isolated framework copy, Lattice fails startup with a direct diagnostic instead of continuing with broken type identity.
+
+For legacy isolated mode, depend on the Paper adapter with `implementation("dev.beryl:lattice-paper:0.8.0")` and shade it into your plugin. Paper plugin jars normally need their runtime libraries shaded or otherwise provided. Isolated mode keeps its own runtime, services, storage handles, and diagnostics instead of sharing the standalone host.
 
 ## Plugin Entry Point
 
@@ -116,7 +107,6 @@ public final class ExamplePlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         runtime.enable();
-        runtime.ready();
     }
 
     @Override
@@ -180,7 +170,7 @@ public final class ExampleModule implements LatticeModule {
 
 Lattice is pre-1.0. Public packages are annotated so plugin authors can see what is intended for use:
 
-- `@StableApi`: supported authoring surface for the current `0.7.x` line.
+- `@StableApi`: supported authoring surface for the current `0.8.x` line.
 - `@ExperimentalApi`: usable, but can change quickly.
 - `@InternalApi`: framework implementation detail.
 

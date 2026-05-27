@@ -57,7 +57,24 @@ jobs:
           else
             version="$(grep '^latticeVersion=' gradle.properties | cut -d= -f2)"
           fi
+          project_version="$(grep '^latticeVersion=' gradle.properties | cut -d= -f2)"
+          if [[ "${project_version}" != "${version}" ]]; then
+            echo "::error::Release version ${version} does not match gradle.properties (${project_version})."
+            exit 1
+          fi
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Check Modrinth credentials
+        shell: bash
+        run: |
+          if [[ -z "${MODRINTH_PROJECT_ID}" ]]; then
+            echo "::error::Missing repository variable MODRINTH_PROJECT_ID."
+            exit 1
+          fi
+          if [[ -z "${MODRINTH_TOKEN}" ]]; then
+            echo "::error::Missing repository secret MODRINTH_TOKEN."
+            exit 1
+          fi
 
       - name: Build
         run: ./gradlew --no-daemon -PlatticeVersion=${{ steps.release.outputs.version }} build

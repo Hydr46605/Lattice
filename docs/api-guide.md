@@ -6,11 +6,11 @@ This guide covers the current Lattice API surface by package and subsystem.
 
 | Artifact | Purpose |
 | --- | --- |
+| `dev.beryl:lattice-api` | Shared API marker artifact used as the stable boundary grows toward 1.0. |
 | `dev.beryl:lattice-core` | Platform-neutral runtime, API contracts, and base implementations. |
-| `dev.beryl:lattice-paper` | Paper/Folia bootstrap, command registration, scheduler routing, UI rendering, diagnostics, storage helpers, and optional integrations. |
-| `dev.beryl:lattice-api` | Minimal shared API marker artifact used as the stable boundary grows toward 1.0. |
+| `dev.beryl:lattice-paper` | Paper/Folia bootstrap, command registration, scheduler routing, UI rendering, diagnostics, storage helpers, optional integrations, and standalone host. |
 
-Depend on `lattice-paper` for Paper plugins. It brings `lattice-core` transitively.
+Use `compileOnly("dev.beryl:lattice-paper:0.8.0")` for shared-runtime Paper plugins. Use `implementation("dev.beryl:lattice-paper:0.8.0")` only for legacy isolated jars that intentionally shade Lattice.
 
 ## Stable Core Packages
 
@@ -50,7 +50,7 @@ Paper command, lifecycle, task, and UI implementation packages are internal. Use
 
 - `load()` registers and prepares modules.
 - `enable()` enables modules in dependency order.
-- `ready()` marks the runtime usable after platform startup.
+- `enable()` enables modules, runs `onReady` hooks, and marks the runtime usable after platform startup.
 - `disable()` disables modules in reverse order and closes services.
 
 Use `LatticeContext` inside modules to access typed services:
@@ -89,7 +89,7 @@ Use `ServiceKey<T>` for plugin services:
 
 ```java
 public static final ServiceKey<UserRepository> USERS =
-        ServiceKey.of("example.users", UserRepository.class);
+        ServiceKey.named(UserRepository.class, "example.users");
 
 context.services().register(USERS, repository, ServiceScope.MODULE);
 UserRepository users = context.require(USERS);
@@ -107,8 +107,8 @@ ConfigHandle<MyConfig> handle = context.require(LatticeRuntime.CONFIG_SERVICE)
                 .schemaVersion(1)
                 .defaults(MyConfig::defaults)
                 .validator(config -> config.enabled()
-                        ? ConfigValidator.valid()
-                        : ConfigValidator.invalid("Plugin is disabled"))
+                        ? List.of()
+                        : List.of("Plugin is disabled"))
                 .build());
 ```
 
