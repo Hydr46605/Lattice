@@ -32,11 +32,11 @@ Build the standalone Paper/Folia jar used for release attachments and Modrinth:
 
 The primary public Maven publication target is Maven Central:
 
-- `dev.beryl:lattice-api:0.8.1`
-- `dev.beryl:lattice-core:0.8.1`
-- `dev.beryl:lattice-paper:0.8.1`
+- `io.github.hydr46605:lattice-api:0.8.1`
+- `io.github.hydr46605:lattice-core:0.8.1`
+- `io.github.hydr46605:lattice-paper:0.8.1`
 
-The `dev.beryl` namespace must be verified in the Sonatype Central Portal before the first Maven Central release. Central publication also requires Apache-2.0 license metadata and signed artifacts.
+The `io.github.hydr46605` namespace must be available in the Sonatype Central Portal before the first Maven Central release. Central publication also requires Apache-2.0 license metadata and signed artifacts.
 
 The release workflow needs these repository secrets:
 
@@ -62,7 +62,7 @@ Central releases are immutable. If a release upload succeeds but validation fail
 
 ## GitHub Packages Mirror
 
-The Gradle build also publishes all Maven modules to GitHub Packages as a permanent authenticated mirror:
+The Gradle build also publishes all Maven modules to GitHub Packages as a permanent authenticated mirror under the original coordinates:
 
 - `dev.beryl:lattice-api:0.8.1`
 - `dev.beryl:lattice-core:0.8.1`
@@ -87,7 +87,7 @@ Manual local mirror publishing requires a token with package write access:
 ```bash
 GITHUB_ACTOR=YourGitHubUsername \
 GITHUB_TOKEN=YourClassicTokenWithWritePackages \
-./gradlew publishAllPublicationsToGitHubPackagesRepository
+./gradlew publishGitHubPackagesMirror
 ```
 
 ## GitHub Release

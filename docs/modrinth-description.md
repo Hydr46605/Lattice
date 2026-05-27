@@ -59,9 +59,9 @@ Lattice is split into three Maven artifacts:
 
 | Artifact | Purpose |
 | --- | --- |
-| `dev.beryl:lattice-api` | Minimal API status markers and the first shared-runtime contract boundary. |
-| `dev.beryl:lattice-core` | Platform-neutral contracts and base implementations under `dev.beryl.lattice`. |
-| `dev.beryl:lattice-paper` | Paper/Folia bootstrap, scheduler, command, UI, diagnostics, storage, hook, integration, and standalone host adapters. |
+| `io.github.hydr46605:lattice-api` | Minimal API status markers and the first shared-runtime contract boundary. |
+| `io.github.hydr46605:lattice-core` | Platform-neutral contracts and base implementations under `dev.beryl.lattice`. |
+| `io.github.hydr46605:lattice-paper` | Paper/Folia bootstrap, scheduler, command, UI, diagnostics, storage, hook, integration, and standalone host adapters. |
 
 `lattice-core` intentionally contains no Bukkit, Paper, or Folia classes. Server-specific behavior belongs in `lattice-paper`, keeping core APIs testable and stable for plugin authors.
 

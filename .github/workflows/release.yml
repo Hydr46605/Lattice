@@ -102,7 +102,7 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_IN_MEMORY_KEY_ID }}
 
       - name: Publish to GitHub Packages mirror
-        run: ./gradlew --no-daemon -PlatticeVersion=${{ steps.release.outputs.version }} publishAllPublicationsToGitHubPackagesRepository
+        run: ./gradlew --no-daemon -PlatticeVersion=${{ steps.release.outputs.version }} publishGitHubPackagesMirror
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ github.token }}
@@ -124,10 +124,10 @@ jobs:
 
           ## Artifacts
 
-          - Maven Central: \`dev.beryl:lattice-api:${VERSION}\`
-          - Maven Central: \`dev.beryl:lattice-core:${VERSION}\`
-          - Maven Central: \`dev.beryl:lattice-paper:${VERSION}\`
-          - GitHub Packages mirror: same Maven coordinates
+          - Maven Central: \`io.github.hydr46605:lattice-api:${VERSION}\`
+          - Maven Central: \`io.github.hydr46605:lattice-core:${VERSION}\`
+          - Maven Central: \`io.github.hydr46605:lattice-paper:${VERSION}\`
+          - GitHub Packages mirror: \`dev.beryl:lattice-api:${VERSION}\`, \`dev.beryl:lattice-core:${VERSION}\`, \`dev.beryl:lattice-paper:${VERSION}\`
           - Standalone Paper/Folia jar attached to this release
           NOTES
 

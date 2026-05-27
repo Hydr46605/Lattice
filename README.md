@@ -77,7 +77,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("dev.beryl:lattice-paper:0.8.1")
+    compileOnly("io.github.hydr46605:lattice-paper:0.8.1")
 }
 ```
 

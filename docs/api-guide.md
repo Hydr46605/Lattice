@@ -6,11 +6,11 @@ This guide covers the current Lattice API surface by package and subsystem.
 
 | Artifact | Purpose |
 | --- | --- |
-| `dev.beryl:lattice-api` | Shared API marker artifact used as the stable boundary grows toward 1.0. |
-| `dev.beryl:lattice-core` | Platform-neutral runtime, API contracts, and base implementations. |
-| `dev.beryl:lattice-paper` | Paper/Folia bootstrap, command registration, scheduler routing, UI rendering, diagnostics, storage helpers, optional integrations, and standalone host. |
+| `io.github.hydr46605:lattice-api` | Shared API marker artifact used as the stable boundary grows toward 1.0. |
+| `io.github.hydr46605:lattice-core` | Platform-neutral runtime, API contracts, and base implementations. |
+| `io.github.hydr46605:lattice-paper` | Paper/Folia bootstrap, command registration, scheduler routing, UI rendering, diagnostics, storage helpers, optional integrations, and standalone host. |
 
-Use `compileOnly("dev.beryl:lattice-paper:0.8.1")` for shared-runtime Paper plugins. Use `implementation("dev.beryl:lattice-paper:0.8.1")` only for legacy isolated jars that intentionally shade Lattice.
+Use `compileOnly("io.github.hydr46605:lattice-paper:0.8.1")` for shared-runtime Paper plugins. Use `implementation("io.github.hydr46605:lattice-paper:0.8.1")` only for legacy isolated jars that intentionally shade Lattice.
 
 ## Stable Core Packages
 
