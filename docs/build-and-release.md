@@ -126,3 +126,5 @@ gh workflow run "Modrinth Project Metadata" \
 ```
 
 The workflow uses the same `MODRINTH_PROJECT_ID` repository variable and `MODRINTH_TOKEN` repository secret as the release workflow, then reads the project back from Modrinth to verify the update.
+
+The token used for metadata sync must include Modrinth `PROJECT_WRITE` scope for the Lattice project. A token that can publish versions may still fail this workflow if it was created only for release uploads.

@@ -57,6 +57,9 @@ jobs:
 
           if [ "$status_code" != "204" ]; then
             echo "Modrinth metadata update failed with HTTP $status_code." >&2
+            if [ "$status_code" = "401" ]; then
+              echo "Ensure MODRINTH_TOKEN is a valid Modrinth token with PROJECT_WRITE scope for this project." >&2
+            fi
             cat "$response" >&2
             exit 1
           fi
