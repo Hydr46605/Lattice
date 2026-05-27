@@ -14,6 +14,7 @@ import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.tasks.PublishToMavenRepository
 import org.gradle.api.publish.tasks.GenerateModuleMetadata
 import org.gradle.plugins.signing.Sign
+import org.gradle.plugins.signing.SigningExtension
 
 plugins {
     base
@@ -33,9 +34,13 @@ val publishGitHubPackagesMirror by tasks.registering {
 
 subprojects {
     apply(plugin = "java-library")
+    apply(plugin = "signing")
     apply(plugin = "com.vanniktech.maven.publish")
 
-    val signingConfigured = providers.gradleProperty("signingInMemoryKey").isPresent
+    val signingInMemoryKey = providers.gradleProperty("signingInMemoryKey")
+    val signingInMemoryKeyId = providers.gradleProperty("signingInMemoryKeyId")
+    val signingInMemoryKeyPassword = providers.gradleProperty("signingInMemoryKeyPassword")
+    val signingConfigured = signingInMemoryKey.isPresent
             || providers.gradleProperty("signing.secretKeyRingFile").isPresent
 
     extensions.configure<MavenPublishBaseExtension>("mavenPublishing") {
@@ -50,7 +55,6 @@ subprojects {
             automaticRelease = true,
             validateDeployment = DeploymentValidation.PUBLISHED,
         )
-        signAllPublications()
         pom {
             name.set(project.name)
             description.set(
@@ -85,7 +89,24 @@ subprojects {
         }
     }
 
+    extensions.configure<SigningExtension>("signing") {
+        isRequired = signingConfigured
+        if (signingInMemoryKey.isPresent) {
+            useInMemoryPgpKeys(
+                signingInMemoryKeyId.orNull,
+                signingInMemoryKey.get(),
+                signingInMemoryKeyPassword.orNull,
+            )
+        }
+    }
+
     extensions.configure<PublishingExtension> {
+        publications.matching { it.name == "maven" }.all {
+            extensions.configure<SigningExtension>("signing") {
+                sign(this@all)
+            }
+        }
+
         publications {
             create<MavenPublication>("githubPackages") {
                 groupId = "dev.beryl"

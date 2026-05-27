@@ -76,10 +76,27 @@ jobs:
             exit 1
           fi
 
+      - name: Check existing Modrinth version
+        id: existing_version
+        shell: bash
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          exists="$(
+            curl -fsSL "https://api.modrinth.com/v2/project/${MODRINTH_PROJECT_ID}/version" \
+              | python -c 'import json, os, sys; version = os.environ["VERSION"]; print("true" if any(item.get("version_number") == version for item in json.load(sys.stdin)) else "false")'
+          )"
+          echo "exists=${exists}" >> "${GITHUB_OUTPUT}"
+          if [[ "${exists}" == "true" ]]; then
+            echo "Modrinth version ${VERSION} already exists; skipping publish."
+          fi
+
       - name: Build
+        if: steps.existing_version.outputs.exists != 'true'
         run: ./gradlew --no-daemon -PlatticeVersion=${{ steps.release.outputs.version }} build
 
       - name: Check release notes
+        if: steps.existing_version.outputs.exists != 'true'
         shell: bash
         run: |
           notes_file="docs/release-notes/${{ steps.release.outputs.version }}.md"
@@ -89,4 +106,5 @@ jobs:
           fi
 
       - name: Publish
+        if: steps.existing_version.outputs.exists != 'true'
         run: ./gradlew --no-daemon -PlatticeVersion=${{ steps.release.outputs.version }} :lattice-paper:modrinth
