@@ -1,6 +1,6 @@
 # Lattice Developer Guide
 
-Lattice is a Java 21 framework for building structured Paper/Folia plugins. It is designed to be used as a library from your plugin, with `lattice-paper` providing the Paper adapter and `lattice-core` providing the platform-neutral API.
+Lattice is a Java 21 framework for building structured Paper/Folia plugins. It supports the current isolated library model and is moving toward a standalone shared-runtime model where the installed `Lattice` plugin owns common infrastructure for dependent plugins.
 
 ## Guide
 
@@ -10,7 +10,7 @@ Lattice is a Java 21 framework for building structured Paper/Folia plugins. It i
 
 ## Coordinates
 
-Most Paper plugins should depend on `lattice-paper`; it brings `lattice-core` transitively.
+For legacy isolated mode, Paper plugins depend on `lattice-paper`; it brings `lattice-core` transitively.
 
 ```kotlin
 dependencies {
@@ -27,3 +27,5 @@ dependencies {
 ```
 
 GitHub Packages requires authentication for Gradle consumption. See [Getting Started](getting-started.md#install-from-github-packages) for the complete repository block.
+
+For shared-runtime mode, install the standalone `Lattice` plugin on the server, compile dependent plugins with `compileOnly("dev.beryl:lattice-paper:0.7.2")`, and declare a hard Paper dependency with `join-classpath: true`.

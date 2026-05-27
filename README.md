@@ -52,6 +52,7 @@ The framework gives plugin projects a clear structure from the first class:
 
 | Module | Purpose |
 | --- | --- |
+| `lattice-api` | Minimal API status markers and future shared-runtime contracts. |
 | `lattice-core` | Platform-neutral contracts and base implementations under `dev.beryl.lattice`. |
 | `lattice-paper` | Paper/Folia bootstrap, scheduler, command, UI, diagnostics, storage, hook, and integration adapters. |
 
@@ -110,6 +111,8 @@ Modules own their config, commands, tasks, storage, UI, and service registration
 
 ## Current Status
 
-Lattice is a pre-1.0 beta framework. The default deployment model is shaded library usage: each dependent plugin owns its own Lattice runtime, module graph, service registry, task tracking, storage handles, and diagnostics surface.
+Lattice is a pre-1.0 beta framework. The legacy deployment model is shaded library usage: each dependent plugin owns its own Lattice runtime, module graph, service registry, task tracking, storage handles, and diagnostics surface.
 
 Release builds also attach a standalone Paper/Folia jar for distribution channels that need a server-installable artifact.
+
+The 1.0 architecture is moving toward a standalone shared-runtime model. In that mode the server installs the `Lattice` plugin, dependent plugins compile against Lattice without shading it, and Paper loads the shared classes through an explicit dependency. The standalone host then owns shared infrastructure such as JDBC pools and aggregate diagnostics while each dependent plugin keeps its own module lifecycle and data folder.

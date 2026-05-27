@@ -39,7 +39,7 @@ gpr.user=YourGitHubUsername
 gpr.key=YourClassicTokenWithReadPackages
 ```
 
-Depend on the Paper adapter:
+For legacy isolated mode, depend on the Paper adapter and shade it into your plugin:
 
 ```kotlin
 dependencies {
@@ -49,6 +49,33 @@ dependencies {
 ```
 
 Paper plugin jars normally need their runtime libraries shaded or otherwise provided. If your plugin shades dependencies, include `lattice-paper`; `lattice-core` is transitive.
+
+For the 1.0 shared-runtime path, install the standalone `Lattice` plugin in the server `plugins/` folder and compile against Lattice without shading or relocating it:
+
+```kotlin
+dependencies {
+    compileOnly("dev.beryl:lattice-paper:0.7.2")
+    compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
+}
+```
+
+Declare a hard Paper dependency on `Lattice` and join its classpath so both plugins see the same Lattice API classes:
+
+```yaml
+name: Example
+version: 1.0.0
+main: com.example.ExamplePlugin
+api-version: '1.21'
+folia-supported: true
+dependencies:
+  server:
+    Lattice:
+      load: BEFORE
+      required: true
+      join-classpath: true
+```
+
+Do not relocate `dev.beryl.lattice` in shared-runtime mode. If a plugin declares a hard `Lattice` dependency but still loads an isolated framework copy, Lattice fails startup with a direct diagnostic instead of continuing with broken type identity.
 
 ## Plugin Entry Point
 

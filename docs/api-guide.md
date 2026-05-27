@@ -8,6 +8,7 @@ This guide covers the current Lattice API surface by package and subsystem.
 | --- | --- |
 | `dev.beryl:lattice-core` | Platform-neutral runtime, API contracts, and base implementations. |
 | `dev.beryl:lattice-paper` | Paper/Folia bootstrap, command registration, scheduler routing, UI rendering, diagnostics, storage helpers, and optional integrations. |
+| `dev.beryl:lattice-api` | Minimal shared API marker artifact used as the stable boundary grows toward 1.0. |
 
 Depend on `lattice-paper` for Paper plugins. It brings `lattice-core` transitively.
 
@@ -34,7 +35,7 @@ Depend on `lattice-paper` for Paper plugins. It brings `lattice-core` transitive
 
 | Package | Main Types | Use |
 | --- | --- | --- |
-| `dev.beryl.lattice.paper.bootstrap` | `LatticePaperPlugin`, `LatticePaper`, `PaperServices`, `StandaloneLatticeBootstrap`, `StandaloneLatticePlugin` | Paper runtime bootstrap for shaded plugins and the standalone release jar. |
+| `dev.beryl.lattice.paper.bootstrap` | `LatticePaperPlugin`, `LatticePaper`, `LatticeHost`, `LatticeHostProvider`, `LatticePluginHandle`, `PaperServices`, `StandaloneLatticeBootstrap`, `StandaloneLatticePlugin` | Paper runtime bootstrap for isolated plugins, shared-host discovery, and the standalone release jar. |
 | `dev.beryl.lattice.paper.config` | `PaperConfigPaths` | Paper data-directory path helpers. |
 | `dev.beryl.lattice.paper.storage` | `PaperAsyncStorageRunner`, `PaperStorageDefaults` | Async database execution and Paper storage defaults. |
 | `dev.beryl.lattice.paper.text` | `PaperAudiences` | Conversion and send helpers for Paper command senders and Adventure audiences. |
