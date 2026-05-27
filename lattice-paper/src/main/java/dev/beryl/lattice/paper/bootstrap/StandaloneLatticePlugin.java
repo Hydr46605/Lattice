@@ -2,25 +2,51 @@ package dev.beryl.lattice.paper.bootstrap;
 
 import dev.beryl.lattice.lifecycle.LatticeRuntime;
 import dev.beryl.lattice.paper.integration.PaperIntegrationBootstrap;
+import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class StandaloneLatticePlugin extends JavaPlugin {
-    private final PaperRuntimeLifecycle lifecycle = new PaperRuntimeLifecycle(() -> StandaloneLatticeBootstrap.create(this, builder -> {
-    }));
+    private LatticeRuntime runtime;
+    private StandaloneLatticeHost host;
 
     @Override
     public void onLoad() {
-        lifecycle.load();
+        host = new StandaloneLatticeHost(this);
+        getServer().getServicesManager().register(LatticeHost.class, host, this, ServicePriority.Highest);
+        try {
+            runtime = StandaloneLatticeBootstrap.create(this, builder -> builder.storageService(host.storageService()));
+            host.attachDiagnostics(runtime);
+            runtime.load();
+        } catch (RuntimeException exception) {
+            getServer().getServicesManager().unregister(LatticeHost.class, host);
+            host.close();
+            host = null;
+            runtime = null;
+            throw exception;
+        }
     }
 
     @Override
     public void onEnable() {
-        lifecycle.enable(this::registerDefaultIntegrations);
+        if (runtime == null) {
+            throw new IllegalStateException("Lattice runtime has not been loaded");
+        }
+        registerDefaultIntegrations(runtime);
+        runtime.enable();
     }
 
     @Override
     public void onDisable() {
-        lifecycle.disable();
+        if (host != null) {
+            host.disableManagedPlugins();
+        }
+        if (runtime != null) {
+            runtime.disable();
+        }
+        if (host != null) {
+            getServer().getServicesManager().unregister(LatticeHost.class, host);
+            host.close();
+        }
     }
 
     private void registerDefaultIntegrations(LatticeRuntime runtime) {

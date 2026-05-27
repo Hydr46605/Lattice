@@ -12,6 +12,8 @@ import dev.beryl.lattice.paper.integration.PaperIntegrationBootstrap;
 import dev.beryl.lattice.paper.integration.PaperIntegrations;
 import dev.beryl.lattice.paper.task.PaperTaskService;
 import dev.beryl.lattice.paper.ui.PaperUiService;
+import dev.beryl.lattice.storage.DefaultStorageService;
+import dev.beryl.lattice.storage.StorageService;
 import dev.beryl.lattice.task.TaskService;
 import dev.beryl.lattice.template.BraceTemplateRenderer;
 import dev.beryl.lattice.template.TemplateVariableResolver;
@@ -26,7 +28,24 @@ public final class LatticePaper {
     public static LatticeRuntime bootstrap(JavaPlugin plugin, Consumer<LatticeBuilder> customizer) {
         Preconditions.requireNonNull(plugin, "plugin");
         Preconditions.requireNonNull(customizer, "customizer");
+        return LatticeHostProvider.find(plugin)
+                .map(host -> host.register(plugin, customizer).runtime())
+                .orElseGet(() -> {
+                    if (declaresRequiredLatticeDependency(plugin) && plugin.getServer().getPluginManager().getPlugin("Lattice") != null) {
+                        throw new IllegalStateException(
+                                plugin.getName()
+                                        + " depends on Lattice but is using an isolated framework copy. "
+                                        + "Use compileOnly for Lattice, keep it unrelocated, and declare join-classpath in paper-plugin.yml."
+                        );
+                    }
+                    return createRuntime(plugin, customizer, DefaultStorageService.withJdbcDefaults());
+                });
+    }
 
+    static LatticeRuntime createRuntime(JavaPlugin plugin, Consumer<LatticeBuilder> customizer, StorageService storageService) {
+        Preconditions.requireNonNull(plugin, "plugin");
+        Preconditions.requireNonNull(customizer, "customizer");
+        Preconditions.requireNonNull(storageService, "storageService");
         IntegrationManager integrations = new DefaultIntegrationManager();
         PaperIntegrationBootstrap.registerDefaults(plugin, integrations);
         TaskService tasks = new PaperTaskService(plugin);
@@ -39,11 +58,17 @@ public final class LatticePaper {
                 .integrationService(integrations)
                 .hookService(new PaperPluginHookService(plugin))
                 .taskService(tasks)
-                .uiService(new PaperUiService(plugin, tasks, integrations));
+                .uiService(new PaperUiService(plugin, tasks, integrations))
+                .storageService(storageService);
         customizer.accept(builder);
         builder.configService(new YamlConfigService(new BraceTemplateRenderer(), variables));
         LatticeRuntime runtime = builder.build();
         PaperDiagnostics.register(plugin, runtime);
         return runtime;
+    }
+
+    private static boolean declaresRequiredLatticeDependency(JavaPlugin plugin) {
+        return plugin.getDescription().getDepend().stream()
+                .anyMatch(dependency -> dependency.equalsIgnoreCase("Lattice"));
     }
 }

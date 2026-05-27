@@ -13,6 +13,7 @@ import dev.beryl.lattice.integration.Integration;
 import dev.beryl.lattice.integration.IntegrationManager;
 import dev.beryl.lattice.service.ServiceKey;
 import dev.beryl.lattice.service.ServiceRegistry;
+import dev.beryl.lattice.service.ServiceScope;
 import dev.beryl.lattice.service.SimpleServiceRegistry;
 import dev.beryl.lattice.storage.DefaultStorageService;
 import dev.beryl.lattice.storage.StorageService;
@@ -38,6 +39,11 @@ public final class LatticeBuilder {
 
     public <T> LatticeBuilder service(ServiceKey<T> key, T service) {
         services.register(key, service);
+        return this;
+    }
+
+    public <T> LatticeBuilder service(ServiceKey<T> key, T service, String owner, ServiceScope scope) {
+        services.register(key, service, owner, scope);
         return this;
     }
 
