@@ -34,7 +34,7 @@ public final class JdbcStorageProvider implements StorageProvider {
         }
     }
 
-    private void prepare(StorageConfig config) throws StorageException {
+    static void prepare(StorageConfig config) throws StorageException {
         if (config.provider() != StorageProviderId.SQLITE || config.file().getParent() == null) {
             return;
         }
@@ -45,9 +45,13 @@ public final class JdbcStorageProvider implements StorageProvider {
         }
     }
 
-    private HikariConfig hikariConfig(StorageConfig config) {
+    static HikariConfig hikariConfig(StorageConfig config) {
+        return hikariConfig(config, "lattice-" + config.provider().name().toLowerCase() + "-pool");
+    }
+
+    static HikariConfig hikariConfig(StorageConfig config, String poolName) {
         HikariConfig hikari = new HikariConfig();
-        hikari.setPoolName("lattice-" + config.provider().name().toLowerCase() + "-pool");
+        hikari.setPoolName(poolName);
         hikari.setJdbcUrl(jdbcUrl(config));
         hikari.setMaximumPoolSize(config.pool().maximumPoolSize());
         hikari.setConnectionTimeout(config.pool().connectionTimeoutMillis());
@@ -66,7 +70,7 @@ public final class JdbcStorageProvider implements StorageProvider {
         return hikari;
     }
 
-    private String jdbcUrl(StorageConfig config) {
+    static String jdbcUrl(StorageConfig config) {
         return switch (config.provider()) {
             case SQLITE -> "jdbc:sqlite:" + config.file().toAbsolutePath();
             case MYSQL -> "jdbc:mysql://" + config.host() + ":" + config.port() + "/" + config.database();
