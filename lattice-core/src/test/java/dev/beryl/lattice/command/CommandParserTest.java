@@ -144,4 +144,70 @@ class CommandParserTest {
                 .argument(new CommandArgument<>("module", String.class, true))
                 .build());
     }
+
+    @Test
+    void parsesCustomArgumentTypes() throws Exception {
+        CommandNode root = CommandNode.command("lattice")
+                .argument(CommandArgument.argument("mode", ExampleMode.class)
+                        .parser(input -> ExampleMode.valueOf(input.toUpperCase(java.util.Locale.ROOT)))
+                        .required()
+                        .build())
+                .build();
+
+        ParsedCommand parsed = parser.parse(root, new String[]{"safe"});
+
+        assertEquals(ExampleMode.SAFE, parsed.arguments().get("mode"));
+    }
+
+    @Test
+    void greedyStringArgumentConsumesRemainingInput() throws Exception {
+        CommandNode root = CommandNode.command("lattice")
+                .child(CommandNode.command("broadcast")
+                        .argument(CommandArgument.greedyString("message").required().build())
+                        .build())
+                .build();
+
+        ParsedCommand parsed = parser.parse(root, new String[]{"broadcast", "hello", "from", "lattice"});
+
+        assertEquals("hello from lattice", parsed.arguments().get("message"));
+        assertEquals("/lattice broadcast <message...>", parsed.usage());
+    }
+
+    @Test
+    void suggestsArgumentValuesFromProvider() {
+        CommandNode root = CommandNode.command("lattice")
+                .child(CommandNode.command("mode")
+                        .argument(CommandArgument.argument("value", String.class)
+                                .suggestions(CommandSuggestionProvider.choices("safe", "strict", "silent"))
+                                .required()
+                                .build())
+                        .build())
+                .build();
+
+        assertEquals(List.of("safe", "strict", "silent"), parser.suggest(root, new String[]{"mode", "s"}));
+    }
+
+    @Test
+    void helpEntriesDescribeNestedCommandTree() {
+        CommandNode root = CommandNode.command("lattice")
+                .description("Root command")
+                .permission("lattice.command")
+                .child(CommandNode.command("reload")
+                        .description("Reload config")
+                        .permission("lattice.reload")
+                        .argument(CommandArgument.greedyString("reason").build())
+                        .build())
+                .build();
+
+        List<CommandHelpEntry> help = CommandUsage.help(root);
+
+        assertEquals(2, help.size());
+        assertEquals("/lattice", help.get(0).usage());
+        assertEquals("/lattice reload [reason...]", help.get(1).usage());
+        assertEquals("lattice.reload", help.get(1).permissionOptional().orElseThrow());
+    }
+
+    private enum ExampleMode {
+        SAFE
+    }
 }

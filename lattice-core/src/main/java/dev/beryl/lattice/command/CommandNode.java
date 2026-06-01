@@ -121,12 +121,18 @@ public final class CommandNode {
 
     private static void validateArguments(List<CommandArgument<?>> arguments) {
         boolean optionalSeen = false;
-        for (CommandArgument<?> argument : arguments) {
+        for (int index = 0; index < arguments.size(); index++) {
+            CommandArgument<?> argument = arguments.get(index);
             if (!argument.required()) {
                 optionalSeen = true;
             } else if (optionalSeen) {
                 throw new IllegalArgumentException(
                         "Required argument " + argument.name() + " cannot follow an optional argument"
+                );
+            }
+            if (argument.greedy() && index != arguments.size() - 1) {
+                throw new IllegalArgumentException(
+                        "Greedy argument " + argument.name() + " must be the final argument"
                 );
             }
         }

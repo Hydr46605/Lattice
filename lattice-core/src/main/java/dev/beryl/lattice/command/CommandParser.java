@@ -75,6 +75,18 @@ public final class CommandParser {
                 }
             }
         }
+
+        int argumentIndex = input.length == 0 ? -1 : input.length - 1 - cursor;
+        if (argumentIndex >= 0 && argumentIndex < node.arguments().size()) {
+            CommandArgument<?> argument = node.arguments().get(argumentIndex);
+            Map<String, Object> parsedArguments = parseSuggestionArguments(path, node.arguments(), input, cursor, argumentIndex);
+            suggestions.addAll(argument.suggestions().suggestions(new CommandSuggestionContext(
+                    path,
+                    parsedArguments,
+                    argument,
+                    input.length == 0 ? "" : input[input.length - 1]
+            )));
+        }
         return List.copyOf(suggestions);
     }
 
@@ -101,7 +113,8 @@ public final class CommandParser {
         if (remaining < required) {
             throw new CommandParseException("Missing required argument", usage);
         }
-        if (remaining > arguments.size()) {
+        boolean greedy = !arguments.isEmpty() && arguments.get(arguments.size() - 1).greedy();
+        if (remaining > arguments.size() && !greedy) {
             throw new CommandParseException("Too many arguments", usage);
         }
 
@@ -110,45 +123,58 @@ public final class CommandParser {
                 break;
             }
             CommandArgument<?> argument = arguments.get(index);
-            parsed.put(argument.name(), parseValue(argument, input[cursor + index], usage));
+            String raw = argument.greedy()
+                    ? String.join(" ", java.util.Arrays.copyOfRange(input, cursor + index, input.length))
+                    : input[cursor + index];
+            parsed.put(argument.name(), parseValue(argument, raw, usage));
+            if (argument.greedy()) {
+                break;
+            }
         }
 
         return parsed;
     }
 
     private Object parseValue(CommandArgument<?> argument, String value, String usage) throws CommandParseException {
-        Class<?> type = argument.type();
         try {
-            if (type == String.class) {
-                return value;
-            }
-            if (type == Integer.class || type == int.class) {
-                return Integer.parseInt(value);
-            }
-            if (type == Long.class || type == long.class) {
-                return Long.parseLong(value);
-            }
-            if (type == Double.class || type == double.class) {
-                return Double.parseDouble(value);
-            }
-            if (type == Float.class || type == float.class) {
-                return Float.parseFloat(value);
-            }
-            if (type == Boolean.class || type == boolean.class) {
-                return parseBoolean(argument, value, usage);
-            }
-        } catch (NumberFormatException exception) {
+            return argument.parser().parse(value);
+        } catch (CommandParseException exception) {
+            throw exception;
+        } catch (CommandParsers.InvalidBooleanArgumentException exception) {
+            throw new CommandParseException("Invalid boolean value for argument " + argument.name(), exception, usage);
+        } catch (CommandParsers.UnsupportedArgumentTypeException exception) {
+            throw new CommandParseException(
+                    "Unsupported argument type for " + argument.name() + ": " + exception.type().getName(),
+                    exception,
+                    usage
+            );
+        } catch (IllegalArgumentException exception) {
+            throw new CommandParseException("Invalid value for argument " + argument.name(), exception, usage);
+        } catch (Exception exception) {
             throw new CommandParseException("Invalid value for argument " + argument.name(), exception, usage);
         }
-
-        throw new CommandParseException("Unsupported argument type for " + argument.name() + ": " + type.getName(), usage);
     }
 
-    private boolean parseBoolean(CommandArgument<?> argument, String value, String usage) throws CommandParseException {
-        return switch (value.toLowerCase(Locale.ROOT)) {
-            case "true", "yes", "on", "1" -> true;
-            case "false", "no", "off", "0" -> false;
-            default -> throw new CommandParseException("Invalid boolean value for argument " + argument.name(), usage);
-        };
+    private Map<String, Object> parseSuggestionArguments(
+            List<CommandNode> path,
+            List<CommandArgument<?>> arguments,
+            String[] input,
+            int cursor,
+            int currentArgumentIndex
+    ) {
+        String usage = CommandUsage.usage(path);
+        Map<String, Object> parsed = new LinkedHashMap<>();
+        for (int index = 0; index < currentArgumentIndex && index < arguments.size(); index++) {
+            if (cursor + index >= input.length) {
+                break;
+            }
+            CommandArgument<?> argument = arguments.get(index);
+            try {
+                parsed.put(argument.name(), parseValue(argument, input[cursor + index], usage));
+            } catch (CommandParseException ignored) {
+                break;
+            }
+        }
+        return parsed;
     }
 }
