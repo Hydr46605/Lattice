@@ -15,7 +15,7 @@
 <p align="center">
   <img alt="Java 21" src="https://img.shields.io/badge/Java-21-orange">
   <img alt="Paper 1.21.11" src="https://img.shields.io/badge/Paper-1.21.11-2ea44f">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.8.1-blue">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.8.2-blue">
   <img alt="Status" src="https://img.shields.io/badge/API-pre--1.0_beta-yellow">
 </p>
 
@@ -40,12 +40,12 @@ The framework gives plugin projects a clear structure from the first class:
 - explicit feature modules with dependency ordering and cycle checks
 - typed service registration without reflection-heavy dependency injection
 - Configurate YAML loading with defaults, validation, schema versions, migrations, and optional Junction variable rendering
-- backend-neutral command declarations with permissions, parsing, usage messages, aliases, and Paper registration
+- backend-neutral command declarations with permissions, custom parsing, completions, usage/help metadata, aliases, and Paper registration
 - Adventure and MiniMessage-first text rendering with legacy input boundaries
 - Folia-aware task contexts for async, global, region, and entity work
 - platform-neutral UI surfaces for inventories, books, anvil input, and virtual sign input
 - JDBC storage helpers for SQLite, MySQL, MariaDB, and PostgreSQL through HikariCP
-- diagnostics snapshots for lifecycle, modules, services, integrations, commands, tasks, UI, and storage
+- diagnostics snapshots for lifecycle, modules, services, integrations, hooks, command trees, tasks, UI, and storage
 - optional Paper integrations for PlaceholderAPI, PacketEvents, Junction, Nexo, Oraxen, ItemsAdder, and CraftEngine
 
 ## Modules
@@ -57,6 +57,16 @@ The framework gives plugin projects a clear structure from the first class:
 | `lattice-paper` | Paper/Folia bootstrap, scheduler, command, UI, diagnostics, storage, hook, and integration adapters. |
 
 `lattice-core` intentionally contains no Bukkit, Paper, or Folia classes. Server-specific behavior belongs in `lattice-paper`, keeping core APIs testable and stable for plugin authors.
+
+## Plugins That Use Lattice
+
+These public plugins use Lattice as a general plugin framework rather than as gameplay-specific or private implementation surface:
+
+| Plugin | Repository | Uses Lattice For |
+| --- | --- | --- |
+| Tabular | https://github.com/Hydr46605/Tabular | Tablists, scoreboards, nametags, templates, animations, command/config structure, and optional PlaceholderAPI/PacketEvents integration status. |
+| Junction | https://github.com/Hydr46605/Junction | Safe config preprocessing, variable rendering, managed templates, backups, reports, and Lattice config-loading integration for dependent plugins. |
+| Onboard | https://github.com/Hydr46605/Onboard | First-join onboarding flows, configured inventory screens, storage, auth-aware lifecycle gates, commands, and optional custom item integrations. |
 
 ## Compatibility
 
@@ -77,7 +87,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.github.hydr46605:lattice-paper:0.8.1")
+    compileOnly("io.github.hydr46605:lattice-paper:0.8.2")
 }
 ```
 

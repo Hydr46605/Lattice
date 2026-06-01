@@ -4,7 +4,7 @@ import dev.beryl.lattice.lifecycle.LatticeBuilder;
 import dev.beryl.lattice.lifecycle.LatticeRuntime;
 
 public final class Lattice {
-    public static final String VERSION = "0.8.1";
+    public static final String VERSION = "0.8.2";
 
     private Lattice() {
     }

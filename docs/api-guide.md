@@ -10,7 +10,7 @@ This guide covers the current Lattice API surface by package and subsystem.
 | `io.github.hydr46605:lattice-core` | Platform-neutral runtime, API contracts, and base implementations. |
 | `io.github.hydr46605:lattice-paper` | Paper/Folia bootstrap, command registration, scheduler routing, UI rendering, diagnostics, storage helpers, optional integrations, and standalone host. |
 
-Use `compileOnly("io.github.hydr46605:lattice-paper:0.8.1")` for shared-runtime Paper plugins. Use `implementation("io.github.hydr46605:lattice-paper:0.8.1")` only for legacy isolated jars that intentionally shade Lattice.
+Use `compileOnly("io.github.hydr46605:lattice-paper:0.8.2")` for shared-runtime Paper plugins. Use `implementation("io.github.hydr46605:lattice-paper:0.8.2")` only for legacy isolated jars that intentionally shade Lattice.
 
 ## Stable Core Packages
 
@@ -22,7 +22,7 @@ Use `compileOnly("io.github.hydr46605:lattice-paper:0.8.1")` for shared-runtime 
 | `dev.beryl.lattice.module` | `LatticeModule`, `ModuleDescriptor`, `ModuleId`, `ModuleDependency`, `ModuleGraph`, `ModuleManager` | Feature module declaration, dependency ordering, cycle checks, and enable/disable ordering. |
 | `dev.beryl.lattice.service` | `ServiceRegistry`, `ServiceKey`, `ServiceHandle`, `ServiceScope`, `CloseableService` | Typed service registration and lookup without global singletons. |
 | `dev.beryl.lattice.config` | `ConfigService`, `ConfigSpec`, `ConfigHandle`, `ConfigMigration`, `ConfigValidator`, `ReloadResult`, `YamlConfigService` | Typed Configurate YAML loading, defaults, validation, migration, saving, and reload. |
-| `dev.beryl.lattice.command` | `CommandService`, `CommandNode`, `CommandContext`, `CommandArgument`, `CommandSenderRef`, `CommandUsage` | Backend-neutral commands with permissions, parsing, usage, aliases, and Paper registration. |
+| `dev.beryl.lattice.command` | `CommandService`, `CommandNode`, `CommandContext`, `CommandArgument`, `CommandArgumentParser`, `CommandSuggestionProvider`, `CommandHelpEntry`, `CommandSenderRef`, `CommandUsage` | Backend-neutral commands with permissions, custom parsing, completions, usage/help metadata, aliases, and Paper registration. |
 | `dev.beryl.lattice.text` | `TextService`, `MessageBundle`, `MessageKey`, `MiniMessageTemplate`, `LegacyText`, `AudienceRef` | Adventure-first text rendering, MiniMessage, message bundles, and legacy text boundaries. |
 | `dev.beryl.lattice.task` | `TaskService`, `TaskOwner`, `TaskContext`, `TaskContextType`, `TaskSchedule`, `TaskHandle`, `RegionRef`, `EntityRef` | Folia-aware async, global, region, and entity scheduling contracts. |
 | `dev.beryl.lattice.ui` | `UiService`, `UiScreen`, `UiPage`, `UiButton`, `UiIcon`, `BookViewSurface`, `AnvilTextInputSurface`, `VirtualSignTextInputSurface` | Platform-neutral inventory, book, anvil-input, and virtual-sign UI surfaces. |
@@ -39,7 +39,7 @@ Use `compileOnly("io.github.hydr46605:lattice-paper:0.8.1")` for shared-runtime 
 | `dev.beryl.lattice.paper.config` | `PaperConfigPaths` | Paper data-directory path helpers. |
 | `dev.beryl.lattice.paper.storage` | `PaperAsyncStorageRunner`, `PaperStorageDefaults` | Async database execution and Paper storage defaults. |
 | `dev.beryl.lattice.paper.text` | `PaperAudiences` | Conversion and send helpers for Paper command senders and Adventure audiences. |
-| `dev.beryl.lattice.paper.integration` | `PaperIntegrations`, `PlaceholderApiService`, `PlaceholderExpansionSpec`, custom item services | Optional PlaceholderAPI, PacketEvents, Junction, Nexo, Oraxen, ItemsAdder, and CraftEngine bindings. |
+| `dev.beryl.lattice.paper.integration` | `PaperIntegrations`, `PlaceholderApiService`, `PlaceholderExpansionSpec`, `PacketEventsService`, `PacketEventsPacketListener`, custom item services | Optional PlaceholderAPI, PacketEvents, Junction, Nexo, Oraxen, ItemsAdder, and CraftEngine bindings. |
 | `dev.beryl.lattice.paper.diagnostics` | `PaperDiagnosticRenderer` | Render diagnostics as Adventure components or plain lines. |
 
 Paper command, lifecycle, task, and UI implementation packages are internal. Use the stable core contracts instead of constructing Paper implementation classes directly.
@@ -135,6 +135,25 @@ commands.register(CommandNode.command("example")
 ```
 
 Command permissions are cumulative along the resolved command path. Parser and usage failures are mapped to user-facing messages; unexpected executor failures are logged with command context.
+
+Use argument builders when a command needs custom parsing, completions, or a greedy final string:
+
+```java
+commands.register(CommandNode.command("example")
+        .child(CommandNode.command("mode")
+                .argument(CommandArgument.argument("value", Mode.class)
+                        .parser(input -> Mode.valueOf(input.toUpperCase(Locale.ROOT)))
+                        .suggestions(CommandSuggestionProvider.choices("safe", "strict", "silent"))
+                        .required()
+                        .build())
+                .build())
+        .child(CommandNode.command("broadcast")
+                .argument(CommandArgument.greedyString("message").required().build())
+                .build())
+        .build());
+```
+
+`CommandUsage.help(root)` returns a flattened command tree with usage strings, descriptions, aliases, depth, and permissions for diagnostics or plugin-owned help commands.
 
 ## Text
 
@@ -274,6 +293,20 @@ PlaceholderExpansionRegistration registration = integrations.requireService(Pape
 
 Close returned registrations during module shutdown if your module owns them.
 
+PacketEvents access is exposed as a typed bridge without requiring plugin code to touch Lattice internals:
+
+```java
+PacketEventsListenerRegistration registration = integrations.requireService(PaperIntegrations.PACKET_EVENTS)
+        .registerListener(new PacketEventsPacketListener() {
+            @Override
+            public void onPacketReceive(PacketEventsPacketEvent event) {
+                event.packetType().ifPresent(type -> logger.fine(type.toString()));
+            }
+        }, PacketEventsListenerPriority.NORMAL);
+```
+
+Close returned PacketEvents registrations during module shutdown. `PacketEventsService#apiHandle()` exposes safe access to the raw PacketEvents API for plugins that need a version-specific escape hatch.
+
 ## Diagnostics
 
 Diagnostics are read-only snapshots. Lattice does not add a global command; expose diagnostics through your plugin command if useful.
@@ -288,7 +321,7 @@ commands.register(CommandNode.command("example")
         .build());
 ```
 
-Snapshots include lifecycle, startup report, modules, services, integrations, commands, tasks, UI, and storage state.
+Snapshots include lifecycle, startup report, modules, services, integrations with details, published hooks, command tree entries, tasks, UI, and storage state. Shared-runtime and isolated storage both report active JDBC health when connections are open.
 
 ## Experimental APIs
 

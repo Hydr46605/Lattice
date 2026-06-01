@@ -23,7 +23,7 @@ For the shared-runtime path, install the standalone `Lattice` plugin in the serv
 
 ```kotlin
 dependencies {
-    compileOnly("io.github.hydr46605:lattice-paper:0.8.1")
+    compileOnly("io.github.hydr46605:lattice-paper:0.8.2")
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
 }
 ```
@@ -46,7 +46,7 @@ dependencies:
 
 Do not relocate `dev.beryl.lattice` in shared-runtime mode. If a plugin declares a hard `Lattice` dependency but still loads an isolated framework copy, Lattice fails startup with a direct diagnostic instead of continuing with broken type identity.
 
-For legacy isolated mode, depend on the Paper adapter with `implementation("io.github.hydr46605:lattice-paper:0.8.1")` and shade it into your plugin. Paper plugin jars normally need their runtime libraries shaded or otherwise provided. Isolated mode keeps its own runtime, services, storage handles, and diagnostics instead of sharing the standalone host.
+For legacy isolated mode, depend on the Paper adapter with `implementation("io.github.hydr46605:lattice-paper:0.8.2")` and shade it into your plugin. Paper plugin jars normally need their runtime libraries shaded or otherwise provided. Isolated mode keeps its own runtime, services, storage handles, and diagnostics instead of sharing the standalone host.
 
 GitHub Packages remains available as an authenticated mirror. Use it only when Maven Central is unavailable or when a maintainer explicitly asks you to consume the mirror:
 
@@ -66,7 +66,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("dev.beryl:lattice-paper:0.8.1")
+    compileOnly("dev.beryl:lattice-paper:0.8.2")
 }
 ```
 
