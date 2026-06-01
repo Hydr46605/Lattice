@@ -37,6 +37,36 @@ val generateStandalonePluginDescriptor by tasks.registering {
             description: A Java 21 foundation for structured Paper/Folia plugin development.
             authors:
               - BerylLabs
+            dependencies:
+              server:
+                PlaceholderAPI:
+                  load: BEFORE
+                  required: false
+                  join-classpath: true
+                Nexo:
+                  load: BEFORE
+                  required: false
+                  join-classpath: true
+                Oraxen:
+                  load: BEFORE
+                  required: false
+                  join-classpath: true
+                ItemsAdder:
+                  load: BEFORE
+                  required: false
+                  join-classpath: true
+                CraftEngine:
+                  load: BEFORE
+                  required: false
+                  join-classpath: true
+                PacketEvents:
+                  load: BEFORE
+                  required: false
+                  join-classpath: true
+                Junction:
+                  load: BEFORE
+                  required: false
+                  join-classpath: true
             """.trimIndent()
                 + "\n"
         )

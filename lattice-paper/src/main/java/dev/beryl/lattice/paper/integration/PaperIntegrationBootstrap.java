@@ -5,6 +5,8 @@ import dev.beryl.lattice.integration.IntegrationManager;
 import dev.beryl.lattice.integration.SimpleIntegration;
 import dev.beryl.lattice.util.Preconditions;
 import java.lang.reflect.Method;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.logging.Level;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
@@ -71,15 +73,20 @@ public final class PaperIntegrationBootstrap {
             Method getApi = packetEvents.getMethod("getAPI");
             Object api = getApi.invoke(null);
             if (api == null) {
-                return SimpleIntegration.failed(PaperIntegrations.PACKET_EVENTS);
+                return SimpleIntegration.failed(
+                        PaperIntegrations.PACKET_EVENTS,
+                        Map.of("reason", "PacketEvents.getAPI returned null")
+                );
             }
+            ReflectivePacketEventsService service = new ReflectivePacketEventsService(api);
             return SimpleIntegration.available(
                     PaperIntegrations.PACKET_EVENTS,
-                    new ReflectivePacketEventsService(api)
+                    service,
+                    integrationDetails(service)
             );
-        } catch (ReflectiveOperationException exception) {
+        } catch (ReflectiveOperationException | LinkageError exception) {
             plugin.getLogger().log(Level.WARNING, "PacketEvents is enabled but Lattice could not bind to it.", exception);
-            return SimpleIntegration.failed(PaperIntegrations.PACKET_EVENTS);
+            return SimpleIntegration.failed(PaperIntegrations.PACKET_EVENTS, failureDetails(exception));
         }
     }
 
@@ -174,5 +181,19 @@ public final class PaperIntegrationBootstrap {
             }
         }
         return false;
+    }
+
+    private static Map<String, String> integrationDetails(PacketEventsService service) {
+        Map<String, String> details = new LinkedHashMap<>();
+        details.put("apiClass", service.apiClassName());
+        service.version().ifPresent(version -> details.put("version", version));
+        return details;
+    }
+
+    private static Map<String, String> failureDetails(Throwable exception) {
+        return Map.of(
+                "reason", exception.getClass().getName(),
+                "message", exception.getMessage() == null ? "" : exception.getMessage()
+        );
     }
 }
