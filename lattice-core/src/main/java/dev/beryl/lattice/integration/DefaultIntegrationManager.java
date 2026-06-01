@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-public final class DefaultIntegrationManager implements IntegrationManager {
+public final class DefaultIntegrationManager implements IntegrationManager, AutoCloseable {
     private final Map<IntegrationKey<?>, Integration<?>> integrations = new LinkedHashMap<>();
 
     @Override
@@ -28,6 +28,31 @@ public final class DefaultIntegrationManager implements IntegrationManager {
     @Override
     public synchronized List<Integration<?>> integrations() {
         return List.copyOf(integrations.values());
+    }
+
+    @Override
+    public synchronized void close() throws Exception {
+        List<Integration<?>> values = List.copyOf(integrations.values());
+        integrations.clear();
+        Exception failure = null;
+        for (int index = values.size() - 1; index >= 0; index--) {
+            Object service = values.get(index).service().orElse(null);
+            if (!(service instanceof AutoCloseable closeable)) {
+                continue;
+            }
+            try {
+                closeable.close();
+            } catch (Exception exception) {
+                if (failure == null) {
+                    failure = exception;
+                } else {
+                    failure.addSuppressed(exception);
+                }
+            }
+        }
+        if (failure != null) {
+            throw failure;
+        }
     }
 
     @SuppressWarnings("unchecked")

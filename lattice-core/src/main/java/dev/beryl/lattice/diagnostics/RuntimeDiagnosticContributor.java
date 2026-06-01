@@ -1,7 +1,10 @@
 package dev.beryl.lattice.diagnostics;
 
 import dev.beryl.lattice.api.InternalApi;
+import dev.beryl.lattice.command.CommandHelpEntry;
 import dev.beryl.lattice.command.CommandService;
+import dev.beryl.lattice.hook.HookDescriptor;
+import dev.beryl.lattice.hook.PluginHookService;
 import dev.beryl.lattice.integration.Integration;
 import dev.beryl.lattice.integration.IntegrationManager;
 import dev.beryl.lattice.integration.IntegrationStatus;
@@ -63,6 +66,7 @@ public final class RuntimeDiagnosticContributor implements DiagnosticContributor
                 moduleSnapshot(),
                 serviceSnapshot(),
                 integrationSnapshot(),
+                hookSnapshot(),
                 commandSnapshot(),
                 taskSnapshot(),
                 uiSnapshot(),
@@ -182,6 +186,7 @@ public final class RuntimeDiagnosticContributor implements DiagnosticContributor
             details.put("status", integration.status().name());
             details.put("type", integration.key().type().getName());
             integration.service().ifPresent(service -> details.put("service", service.getClass().getName()));
+            details.putAll(integration.details());
             children.add(new DiagnosticSnapshot(
                     "integration:" + integration.key().value(),
                     integrationStatus(integration.status()),
@@ -200,6 +205,37 @@ public final class RuntimeDiagnosticContributor implements DiagnosticContributor
         );
     }
 
+    private DiagnosticSnapshot hookSnapshot() {
+        PluginHookService hooks = services.find(LatticeRuntime.HOOK_SERVICE).orElse(null);
+        if (hooks == null) {
+            return DiagnosticSnapshot.of("hooks", DiagnosticStatus.OK, "No hook service registered");
+        }
+
+        List<DiagnosticSnapshot> children = new ArrayList<>();
+        for (HookDescriptor hook : hooks.hooks()) {
+            Map<String, String> details = new LinkedHashMap<>();
+            details.put("key", hook.key());
+            details.put("provider", hook.provider());
+            details.put("type", hook.type());
+            details.put("priority", hook.priority().name());
+            children.add(new DiagnosticSnapshot(
+                    "hook:" + hook.key(),
+                    DiagnosticStatus.OK,
+                    hook.key(),
+                    details,
+                    List.of(),
+                    List.of(),
+                    Instant.now()
+            ));
+        }
+        return DiagnosticSnapshot.section(
+                "hooks",
+                "Published plugin hooks",
+                Map.of("count", Integer.toString(children.size())),
+                children
+        );
+    }
+
     private DiagnosticSnapshot commandSnapshot() {
         CommandService commands = services.find(LatticeRuntime.COMMAND_SERVICE).orElse(null);
         if (commands == null) {
@@ -213,13 +249,32 @@ public final class RuntimeDiagnosticContributor implements DiagnosticContributor
             details.put("aliases", String.join(",", command.aliases()));
             details.put("description", command.description());
             command.permissionOptional().ifPresent(permission -> details.put("permission", permission));
+            List<DiagnosticSnapshot> helpChildren = new ArrayList<>();
+            for (int index = 0; index < command.entries().size(); index++) {
+                CommandHelpEntry entry = command.entries().get(index);
+                Map<String, String> entryDetails = new LinkedHashMap<>();
+                entryDetails.put("usage", entry.usage());
+                entryDetails.put("description", entry.description());
+                entryDetails.put("aliases", String.join(",", entry.aliases()));
+                entryDetails.put("depth", Integer.toString(entry.depth()));
+                entry.permissionOptional().ifPresent(permission -> entryDetails.put("permission", permission));
+                helpChildren.add(new DiagnosticSnapshot(
+                        "command:" + command.name() + ":entry:" + index,
+                        DiagnosticStatus.OK,
+                        entry.usage(),
+                        entryDetails,
+                        List.of(),
+                        List.of(),
+                        Instant.now()
+                ));
+            }
             children.add(new DiagnosticSnapshot(
                     "command:" + command.name(),
                     DiagnosticStatus.OK,
                     "/" + command.name(),
                     details,
                     List.of(),
-                    List.of(),
+                    helpChildren,
                     Instant.now()
             ));
         }
@@ -275,6 +330,7 @@ public final class RuntimeDiagnosticContributor implements DiagnosticContributor
         for (StorageHealth health : diagnostics.connectionHealth()) {
             Map<String, String> details = new LinkedHashMap<>();
             details.put("provider", health.provider().name());
+            details.put("status", health.status().name());
             details.put("message", health.message());
             details.put("config", health.redactedConfig());
             health.pool().ifPresent(pool -> details.put("pool", pool.toString()));

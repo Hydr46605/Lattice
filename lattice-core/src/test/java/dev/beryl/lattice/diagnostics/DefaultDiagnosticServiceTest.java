@@ -6,9 +6,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.beryl.lattice.command.CommandService;
+import dev.beryl.lattice.command.CommandUsage;
 import dev.beryl.lattice.lifecycle.LatticeRuntime;
 import dev.beryl.lattice.module.LatticeModule;
 import dev.beryl.lattice.module.ModuleDescriptor;
+import dev.beryl.lattice.hook.DefaultPluginHookService;
+import dev.beryl.lattice.hook.HookKey;
+import dev.beryl.lattice.hook.PluginHookService;
+import dev.beryl.lattice.integration.IntegrationKey;
+import dev.beryl.lattice.integration.IntegrationManager;
+import dev.beryl.lattice.integration.DefaultIntegrationManager;
+import dev.beryl.lattice.integration.SimpleIntegration;
 import dev.beryl.lattice.storage.StorageProviderId;
 import dev.beryl.lattice.task.TaskContextType;
 import dev.beryl.lattice.task.TaskService;
@@ -61,6 +69,55 @@ class DefaultDiagnosticServiceTest {
         assertEquals("1", child(runtimeSnapshot, "commands").details().get("count"));
         assertEquals("2", child(runtimeSnapshot, "tasks").details().get("activeTasks"));
         assertEquals("1", child(runtimeSnapshot, "ui").details().get("activeSessions"));
+    }
+
+    @Test
+    void runtimeDiagnosticsExposeIntegrationDetailsHooksAndCommandTree() {
+        IntegrationKey<ExampleIntegration> key = new IntegrationKey<>("example", ExampleIntegration.class);
+        DefaultIntegrationManager integrations = new DefaultIntegrationManager();
+        integrations.register(SimpleIntegration.available(
+                key,
+                new ExampleIntegration(),
+                Map.of("version", "1.0.0", "provider", "fake")
+        ));
+        DefaultPluginHookService hooks = new DefaultPluginHookService("diagnostics");
+        hooks.publish(new HookKey<>("example.decorate", ExampleHook.class), new ExampleHook());
+
+        LatticeRuntime runtime = LatticeRuntime.builder("diagnostics")
+                .integrationService(integrations)
+                .hookService(hooks)
+                .service(LatticeRuntime.COMMAND_SERVICE, new RecordingCommandService())
+                .build();
+
+        DiagnosticSnapshot runtimeSnapshot = runtime.context()
+                .require(LatticeRuntime.DIAGNOSTIC_SERVICE)
+                .snapshot("runtime")
+                .orElseThrow();
+
+        DiagnosticSnapshot integration = child(child(runtimeSnapshot, "integrations"), "integration:example");
+        assertEquals("1.0.0", integration.details().get("version"));
+        assertEquals("fake", integration.details().get("provider"));
+        assertEquals("1", child(runtimeSnapshot, "hooks").details().get("count"));
+        assertTrue(child(runtimeSnapshot, "commands").children().stream()
+                .flatMap(root -> root.children().stream())
+                .anyMatch(entry -> "/root diagnostics".equals(entry.details().get("usage"))));
+    }
+
+    @Test
+    void isolatedStorageDiagnosticsExposeActiveConnectionHealth() throws Exception {
+        LatticeRuntime runtime = LatticeRuntime.builder("diagnostics").build();
+        var storage = runtime.context().require(LatticeRuntime.STORAGE_SERVICE);
+        try (var ignored = storage.connect(dev.beryl.lattice.storage.StorageConfig.sqlite(
+                java.nio.file.Files.createTempDirectory("lattice-diagnostics").resolve("active.db")
+        ))) {
+            DiagnosticSnapshot runtimeSnapshot = runtime.context()
+                    .require(LatticeRuntime.DIAGNOSTIC_SERVICE)
+                    .snapshot("runtime")
+                    .orElseThrow();
+
+            assertEquals("1", child(runtimeSnapshot, "storage").details().get("connections"));
+            assertEquals("HEALTHY", child(child(runtimeSnapshot, "storage"), "storage:sqlite").details().get("status"));
+        }
     }
 
     @Test
@@ -123,8 +180,29 @@ class DefaultDiagnosticServiceTest {
 
         @Override
         public List<CommandDiagnostics> commands() {
-            return List.of(new CommandDiagnostics("root", List.of("r"), "Root command", "root.use"));
+            var root = dev.beryl.lattice.command.CommandNode.command("root")
+                    .alias("r")
+                    .description("Root command")
+                    .permission("root.use")
+                    .child(dev.beryl.lattice.command.CommandNode.command("diagnostics")
+                            .description("Show diagnostics")
+                            .permission("root.diagnostics")
+                            .build())
+                    .build();
+            return List.of(new CommandDiagnostics(
+                    root.name(),
+                    root.aliases(),
+                    root.description(),
+                    root.permission().map(permission -> permission.value()).orElse(null),
+                    CommandUsage.help(root)
+            ));
         }
+    }
+
+    private static final class ExampleIntegration {
+    }
+
+    private static final class ExampleHook {
     }
 
     private static final class RecordingTaskService implements TaskService {

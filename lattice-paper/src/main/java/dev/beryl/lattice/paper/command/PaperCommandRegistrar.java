@@ -9,6 +9,7 @@ import dev.beryl.lattice.command.CommandPermissionException;
 import dev.beryl.lattice.command.CommandPermissions;
 import dev.beryl.lattice.command.CommandSenderRef;
 import dev.beryl.lattice.command.CommandService;
+import dev.beryl.lattice.command.CommandUsage;
 import dev.beryl.lattice.command.CommandUsageException;
 import dev.beryl.lattice.command.ParsedCommand;
 import dev.beryl.lattice.diagnostics.CommandDiagnostics;
@@ -82,7 +83,8 @@ public final class PaperCommandRegistrar implements CommandService {
                             command.name(),
                             command.aliases(),
                             command.description(),
-                            command.permission().map(permission -> permission.value()).orElse(null)
+                            command.permission().map(permission -> permission.value()).orElse(null),
+                            CommandUsage.help(command)
                     ))
                     .toList();
         }

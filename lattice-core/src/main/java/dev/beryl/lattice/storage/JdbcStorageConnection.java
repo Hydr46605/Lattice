@@ -13,6 +13,7 @@ public final class JdbcStorageConnection implements StorageConnection {
     private final DataSource dataSource;
     private final AutoCloseable closeableDataSource;
     private final Connection fixedConnection;
+    private volatile boolean closed;
 
     public JdbcStorageConnection(StorageConfig config, DataSource dataSource, AutoCloseable closeableDataSource) {
         this.config = Preconditions.requireNonNull(config, "config");
@@ -70,6 +71,9 @@ public final class JdbcStorageConnection implements StorageConnection {
     }
 
     public StorageHealth health() {
+        if (closed) {
+            return StorageHealth.unhealthy(config, "Storage connection is closed", Optional.empty());
+        }
         Optional<JdbcPoolSnapshot> pool = poolSnapshot();
         try {
             useConnection(sql -> {
@@ -104,6 +108,7 @@ public final class JdbcStorageConnection implements StorageConnection {
 
     @Override
     public void close() throws StorageException {
+        closed = true;
         if (closeableDataSource == null) {
             return;
         }
@@ -112,6 +117,10 @@ public final class JdbcStorageConnection implements StorageConnection {
         } catch (Exception exception) {
             throw new StorageException("Failed to close JDBC storage pool", exception);
         }
+    }
+
+    public boolean closed() {
+        return closed;
     }
 
     @FunctionalInterface
