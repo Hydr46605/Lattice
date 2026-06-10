@@ -172,6 +172,8 @@ public final class ExampleModule implements LatticeModule {
 
 For command help, diagnostics, and custom failure wording, keep the command surface owned by your plugin. Lattice provides command parsing, usage metadata, default feedback mapping, and diagnostics snapshots, but it does not add a global admin command.
 
+For owner-edited inventory menus, see [Configured Inventory Authoring](api-guide.md#configured-inventory-authoring).
+
 ## API Status
 
 Lattice is pre-1.0. Public packages are annotated so plugin authors can see what is intended for use:

@@ -26,7 +26,7 @@ Use `compileOnly("io.github.hydr46605:lattice-paper:0.8.3")` for shared-runtime 
 | `dev.beryl.lattice.text` | `TextService`, `MessageBundle`, `MessageKey`, `MiniMessageTemplate`, `LegacyText`, `AudienceRef` | Adventure-first text rendering, MiniMessage, message bundles, and legacy text boundaries. |
 | `dev.beryl.lattice.task` | `TaskService`, `TaskOwner`, `TaskContext`, `TaskContextType`, `TaskSchedule`, `TaskHandle`, `RegionRef`, `EntityRef` | Folia-aware async, global, region, and entity scheduling contracts. |
 | `dev.beryl.lattice.ui` | `UiService`, `UiScreen`, `UiPage`, `UiButton`, `UiIcon`, `BookViewSurface`, `AnvilTextInputSurface`, `VirtualSignTextInputSurface` | Platform-neutral inventory, book, anvil-input, and virtual-sign UI surfaces. |
-| `dev.beryl.lattice.ui.config` | `ConfiguredInventoryScreen`, `ConfiguredInventoryPage`, `ConfiguredInventoryButton`, `ConfiguredUiIcon`, `ConfiguredInventoryUiCompiler` | YAML-driven inventory screens compiled into `UiScreen`. |
+| `dev.beryl.lattice.ui.config` | `ConfiguredInventoryScreen`, `ConfiguredInventoryPage`, `ConfiguredInventoryButton`, `ConfiguredUiIcon`, `ConfiguredUiAction`, `ConfiguredUiActionResolver`, `ConfiguredInventoryUiCompiler`, `ConfiguredUiException` | YAML-driven inventory screens compiled into `UiScreen`. |
 | `dev.beryl.lattice.storage` | `StorageService`, `StorageConfig`, `JdbcStorageConnection`, `JdbcMigrationRunner`, `SqlMigration`, `JdbcStatementExecutor`, `JdbcTransactionRunner` | SQLite, MySQL, MariaDB, PostgreSQL, migrations, transactions, pool health, and JDBC helpers. |
 | `dev.beryl.lattice.integration` | `IntegrationManager`, `IntegrationKey`, `Integration`, `IntegrationStatus`, `Capability`, `SimpleIntegration` | Optional plugin capability registration and lookup. |
 | `dev.beryl.lattice.diagnostics` | `DiagnosticService`, `DiagnosticSnapshot`, `DiagnosticFinding`, subsystem diagnostic records | Read-only runtime snapshots for support commands and health checks. |
@@ -236,6 +236,76 @@ Available surfaces:
 - `VirtualSignTextInputSurface` for four-line Paper virtual sign input.
 
 Use `ConfiguredInventoryUiCompiler` when server owners should edit menus in YAML. Lattice compiles the shape; your plugin owns action semantics.
+
+### Configured Inventory Authoring
+
+Configured inventory files map to `ConfiguredInventoryScreen`, then compile into a normal `UiScreen`:
+
+```yaml
+title: "<dark_gray>Profile Menu</dark_gray>"
+rows: 3
+pages:
+  - id: main
+    buttons:
+      - slot: 11
+        icon:
+          source: material
+          key: player_head
+          name: "<aqua>Your Profile</aqua>"
+          lore:
+            - "<gray>View stats and settings.</gray>"
+        actions:
+          - type: "profile:open"
+            data:
+              target: "overview"
+      - slot: 15
+        icon:
+          source: custom
+          provider-id: craftengine
+          key: "menu:daily_crate"
+          amount: 1
+          name: "<gold>Daily Crate</gold>"
+          fallback:
+            source: material
+            key: chest
+        actions:
+          - type: "crate:open"
+            data:
+              category: "daily"
+      - slot: 26
+        icon:
+          source: material
+          key: arrow
+          name: "<yellow>Next</yellow>"
+        actions:
+          - type: "menu:page"
+            data:
+              page: confirm
+  - id: confirm
+    buttons:
+      - slot: 11
+        icon:
+          source: material
+          key: lime_dye
+          name: "<green>Confirm</green>"
+        actions:
+          - type: "purchase:confirm"
+            data:
+              offer: "daily_crate"
+      - slot: 15
+        icon:
+          source: material
+          key: barrier
+          name: "<red>Back</red>"
+        actions:
+          - type: "menu:page"
+            data:
+              page: main
+```
+
+Lattice compiles the UI shape and the plugin resolves action semantics via `ConfiguredUiActionResolver`. The `actions` list is data for your resolver; if an action type is shared with commands or other entry points, route it through the same plugin service instead of treating it as inventory-only behavior.
+
+Diagnostics are contextual via `ConfiguredUiException`, with paths such as `profile-menu.pages[0].buttons[1].icon.fallback.key` or `profile-menu.pages[1].buttons[0].actions[0]`.
 
 Custom item icons can target Nexo, Oraxen, ItemsAdder, CraftEngine, or any registered custom provider, with a material fallback:
 
