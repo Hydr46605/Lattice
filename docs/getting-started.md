@@ -88,7 +88,7 @@ public final class ExamplePlugin extends LatticePaperPlugin {
 }
 ```
 
-`LatticePaperPlugin` starts the runtime during the Paper plugin lifecycle and closes it during shutdown.
+`LatticePaperPlugin` starts the runtime during the Paper plugin lifecycle and closes it during shutdown. In shared-runtime mode it attaches the plugin to the installed `Lattice` host automatically, then detaches the runtime handle when the plugin is disabled.
 
 If your plugin already has its own `JavaPlugin` base class, bootstrap manually:
 
@@ -121,6 +121,8 @@ public final class ExamplePlugin extends JavaPlugin {
     }
 }
 ```
+
+Manual bootstrap code should still call `runtime.disable()` during plugin shutdown. This closes registered services even if the runtime was created but never loaded, which keeps shared-runtime host handles and storage leases from lingering after partial startup.
 
 ## First Module
 

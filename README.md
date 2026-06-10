@@ -114,6 +114,8 @@ Modules own their config, commands, tasks, storage, UI, and service registration
 
 Lattice is a pre-1.0 beta framework. The preferred 0.8 deployment model is the standalone shared runtime: the server installs the `Lattice` plugin, dependent plugins compile against Lattice without relocation, and Paper loads the shared classes through an explicit dependency.
 
+The shared host owns aggregate diagnostics and shared storage pools while each dependent plugin keeps its own runtime, services, tasks, UI sessions, and module graph. During shutdown, dependent runtimes detach from the host and shared resources are still cleaned up if another dependent plugin fails while disabling.
+
 Release builds also attach a standalone Paper/Folia jar for distribution channels that need a server-installable artifact.
 
 Legacy shaded library usage remains supported for compatibility. In that mode each dependent plugin owns its own Lattice runtime, module graph, service registry, task tracking, storage handles, and diagnostics surface.

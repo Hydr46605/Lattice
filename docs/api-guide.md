@@ -44,14 +44,21 @@ Use `compileOnly("io.github.hydr46605:lattice-paper:0.8.5")` for shared-runtime 
 
 Paper command, lifecycle, task, and UI implementation packages are internal. Use the stable core contracts instead of constructing Paper implementation classes directly.
 
+## Shared Runtime Host
+
+In shared-runtime mode, the standalone `Lattice` plugin registers a `LatticeHost` service with Paper. Dependent plugins normally use `LatticePaperPlugin` or `LatticePaper.bootstrap(...)`; both paths discover the host automatically when it is available and fall back to isolated mode only when the plugin is not declaring a hard `Lattice` dependency.
+
+The host owns shared infrastructure such as JDBC pools and aggregate diagnostics. Each dependent plugin still receives its own `LatticeRuntime`, module graph, services, tasks, UI sessions, and diagnostics subtree. When a dependent runtime is disabled, its host handle is detached and runtime services are closed. Host shutdown disables managed plugins in reverse registration order and continues cleanup even if one dependent plugin fails during disable.
+
+Use `LatticeHost`, `LatticeHostProvider`, and `LatticePluginHandle` only for integration code that needs explicit host control. Normal plugin authoring should prefer `LatticePaperPlugin` and let Paper call `load()`, `enable()`, and `disable()` through the plugin lifecycle.
+
 ## Runtime Lifecycle
 
 `LatticeBuilder` collects modules and runtime customization. `LatticeRuntime` owns startup and shutdown:
 
 - `load()` registers and prepares modules.
-- `enable()` enables modules in dependency order.
-- `enable()` enables modules, runs `onReady` hooks, and marks the runtime usable after platform startup.
-- `disable()` disables modules in reverse order and closes services.
+- `enable()` enables modules in dependency order, runs `onReady` hooks, and marks the runtime usable after platform startup.
+- `disable()` disables modules in reverse order, cancels tasks, and closes services. Calling `disable()` before `load()` still closes registered services.
 
 Use `LatticeContext` inside modules to access typed services:
 
