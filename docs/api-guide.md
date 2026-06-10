@@ -421,6 +421,39 @@ commands.register(CommandNode.command("example")
 
 Snapshots include lifecycle, startup report, modules, services, integrations with details, published hooks, command tree entries, tasks, UI, and storage state. Shared-runtime and isolated storage both report active JDBC health when connections are open.
 
+### Debugging Startup And Config Failures
+
+`LifecycleException` carries optional context for failures during runtime startup and shutdown. Use `runtimeIdOptional()`, `phaseOptional()`, `operationOptional()`, and `moduleIdOptional()` when reporting the failure. Some failures may leave fields empty, especially compatibility-created exceptions or non-module failures.
+
+```java
+try {
+    runtime.enable();
+} catch (LifecycleException exception) {
+    logger.warning("Lattice startup failed"
+            + exception.runtimeIdOptional().map(value -> " runtime=" + value).orElse("")
+            + exception.phaseOptional().map(value -> " phase=" + value).orElse("")
+            + exception.operationOptional().map(value -> " operation=" + value).orElse("")
+            + exception.moduleIdOptional().map(value -> " module=" + value).orElse("")
+            + ": " + exception.getMessage());
+    throw exception;
+}
+```
+
+`ConfigException` carries optional path and operation context. This lets reload commands and startup logs report whether the failure came from `load`, `parse`, `render`, `defaults`, `deserialize`, `validate`, `migrate`, `serialize`, or `save` without parsing the exception message.
+
+```java
+try {
+    config.reload();
+} catch (ConfigException exception) {
+    logger.warning("Config reload failed"
+            + exception.pathOptional().map(path -> " path=" + path).orElse("")
+            + exception.operationOptional().map(operation -> " operation=" + operation).orElse("")
+            + ": " + exception.getMessage());
+}
+```
+
+Lifecycle diagnostics include startup events and the most recent failed operation. When startup fails, the lifecycle snapshot exposes the last failed operation, module id, and message when those values are available, so a plugin-owned diagnostics command can show useful context without requiring server owners to search the full console log.
+
 ## Experimental APIs
 
 ### Hooks

@@ -172,6 +172,8 @@ public final class ExampleModule implements LatticeModule {
 
 For command help, diagnostics, and custom failure wording, keep the command surface owned by your plugin. Lattice provides command parsing, usage metadata, default feedback mapping, and diagnostics snapshots, but it does not add a global admin command.
 
+When startup or config loading fails, report `LifecycleException` and `ConfigException` context through your plugin logger or diagnostics command. Lattice keeps the command surface plugin-owned, but provides runtime id, phase, operation, module id, and config path context when available.
+
 For owner-edited inventory menus, see [Configured Inventory Authoring](api-guide.md#configured-inventory-authoring).
 
 ## API Status
