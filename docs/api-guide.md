@@ -65,6 +65,7 @@ Default service keys on `LatticeRuntime`:
 - `TEXT_SERVICE`
 - `CONFIG_SERVICE`
 - `COMMAND_SERVICE`
+- `COMMAND_EXCEPTION_MAPPER`
 - `TASK_SERVICE`
 - `STORAGE_SERVICE`
 - `INTEGRATION_SERVICE`
@@ -96,6 +97,25 @@ UserRepository users = context.require(USERS);
 ```
 
 Services that implement `AutoCloseable` or `CloseableService` are closed during runtime shutdown when registered through the service registry.
+
+### Service Customization
+
+`LatticeBuilder#service(key, service)` is strict registration and fails if a service already exists for that key.
+
+Use typed helpers such as `textService`, `configService`, `commandService`, `taskService`, `storageService`, `integrationService`, `hookService`, `uiService`, and `diagnosticService` when you want to provide a default only if the runtime has not already supplied one.
+
+Use `replaceService(key, service)` when replacement is intentional:
+
+```java
+builder.replaceService(LatticeRuntime.COMMAND_SERVICE, commands);
+```
+
+Paper plugins that only need custom command failure text should prefer `commandExceptionMapper(...)`:
+
+```java
+builder.commandExceptionMapper((throwable, context) ->
+        Component.text("That command could not be completed."));
+```
 
 ## Config
 
@@ -134,7 +154,7 @@ commands.register(CommandNode.command("example")
         .build());
 ```
 
-Command permissions are cumulative along the resolved command path. Parser and usage failures are mapped to user-facing messages; unexpected executor failures are logged with command context.
+Command permissions are cumulative along the resolved command path.
 
 Use argument builders when a command needs custom parsing, completions, or a greedy final string:
 
@@ -153,7 +173,11 @@ commands.register(CommandNode.command("example")
         .build());
 ```
 
-`CommandUsage.help(root)` returns a flattened command tree with usage strings, descriptions, aliases, depth, and permissions for diagnostics or plugin-owned help commands.
+Command failures use `CommandExceptionMapper`. The default mapper handles permission, usage, parse, and unexpected executor failures with concise player-facing text while Paper logs contextual details.
+
+Use `CommandExceptionMappers.defaultMapper()` if you build a command registrar manually. Use `LatticeBuilder#commandExceptionMapper(...)` in Paper bootstrap code when you want plugin-owned wording.
+
+`CommandUsage.help(root)` is the recommended source for plugin-owned help and diagnostics output. It returns a flattened command tree with usage strings, descriptions, aliases, depth, and permissions. Lattice does not register a global command for you.
 
 ## Text
 
@@ -260,6 +284,10 @@ CompletableFuture<UserProfile> profile = asyncStorage.supply("load user", () -> 
 ## Integrations
 
 `IntegrationManager` exposes optional capabilities without hard dependencies.
+
+Optional integrations are runtime capabilities. Check `IntegrationManager#status(...)`, `available(...)`, `service(...)`, or `requireService(...)`, and use the typed integration service interfaces instead of depending on Lattice's reflective adapters.
+
+Junction variables are resolved through the `PaperIntegrations.JUNCTION_VARIABLES` capability when Junction is present and exposes the expected API. Lattice does not require your plugin to hard-depend on Junction, but declare an optional dependency if your plugin needs Junction loaded before its config is read.
 
 ```java
 IntegrationManager integrations = context.require(LatticeRuntime.INTEGRATION_SERVICE);

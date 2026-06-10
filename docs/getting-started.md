@@ -44,6 +44,8 @@ dependencies:
       join-classpath: true
 ```
 
+Only declare optional plugin dependencies that your plugin directly needs for load order or classpath access. Lattice registers its built-in optional Paper integrations in `IntegrationManager`; plugin code should check integration status before using optional services.
+
 Do not relocate `dev.beryl.lattice` in shared-runtime mode. If a plugin declares a hard `Lattice` dependency but still loads an isolated framework copy, Lattice fails startup with a direct diagnostic instead of continuing with broken type identity.
 
 For legacy isolated mode, depend on the Paper adapter with `implementation("io.github.hydr46605:lattice-paper:0.8.2")` and shade it into your plugin. Paper plugin jars normally need their runtime libraries shaded or otherwise provided. Isolated mode keeps its own runtime, services, storage handles, and diagnostics instead of sharing the standalone host.
@@ -167,6 +169,8 @@ public final class ExampleModule implements LatticeModule {
     }
 }
 ```
+
+For command help, diagnostics, and custom failure wording, keep the command surface owned by your plugin. Lattice provides command parsing, usage metadata, default feedback mapping, and diagnostics snapshots, but it does not add a global admin command.
 
 ## API Status
 
