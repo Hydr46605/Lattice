@@ -59,6 +59,9 @@ class ApiStatusCoverageTest {
     void stableAuthoringEntryPointsStayStable() throws Exception {
         List<ApiType> types = publicTypes();
 
+        assertTypeStatus(types, "dev.beryl.lattice.command.CommandExceptionMappers", ApiStatus.STABLE);
+        assertTypeStatus(types, "dev.beryl.lattice.lifecycle.LatticeBuilder", ApiStatus.STABLE);
+        assertTypeStatus(types, "dev.beryl.lattice.lifecycle.LatticeRuntime", ApiStatus.STABLE);
         assertTypeStatus(types, "dev.beryl.lattice.paper.bootstrap.LatticePaper", ApiStatus.STABLE);
         assertTypeStatus(types, "dev.beryl.lattice.paper.bootstrap.LatticeHost", ApiStatus.STABLE);
         assertTypeStatus(types, "dev.beryl.lattice.paper.bootstrap.LatticeHostProvider", ApiStatus.STABLE);
