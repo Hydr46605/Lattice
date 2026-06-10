@@ -189,7 +189,138 @@ class YamlConfigServiceTest {
         assertTrue(Files.readString(path).contains("{{missing}}"));
     }
 
+    @Test
+    void nonRenderedYamlParseFailureIncludesPathAndParseOperation() throws Exception {
+        Path path = tempDir.resolve("invalid.yml");
+        Files.writeString(path, """
+                _schema-version: 1
+                name: [
+                """);
+        YamlConfigService service = new YamlConfigService();
+
+        ConfigException exception = assertThrows(ConfigException.class, () -> service.load(ConfigSpec.builder(
+                        ExampleConfig.class,
+                        path
+                )
+                .defaults(() -> new ExampleConfig("Default", false, 0))
+                .build()));
+
+        assertEquals(path, exception.pathOptional().orElseThrow());
+        assertEquals("parse", exception.operationOptional().orElseThrow());
+    }
+
+    @Test
+    void legacyMigrationExceptionGetsPathAndOperationContext() throws Exception {
+        Path path = tempDir.resolve("config.yml");
+        Files.writeString(path, """
+                _schema-version: 0
+                name: Lattice
+                enabled: true
+                retries: 1
+                """);
+        YamlConfigService service = new YamlConfigService();
+
+        ConfigException exception = assertThrows(ConfigException.class, () -> service.load(ConfigSpec.builder(
+                        ExampleConfig.class,
+                        path
+                )
+                .schemaVersion(1)
+                .defaults(() -> new ExampleConfig("Default", false, 0))
+                .migration(failingMigration(new ConfigException("migration failed")))
+                .build()));
+
+        assertEquals("migration failed", exception.getMessage());
+        assertEquals(path, exception.pathOptional().orElseThrow());
+        assertEquals("migrate", exception.operationOptional().orElseThrow());
+    }
+
+    @Test
+    void pathOnlyMigrationExceptionPreservesPathAndGetsOperationContext() throws Exception {
+        Path path = tempDir.resolve("config.yml");
+        Path migrationPath = tempDir.resolve("migration.yml");
+        Files.writeString(path, """
+                _schema-version: 0
+                name: Lattice
+                enabled: true
+                retries: 1
+                """);
+        YamlConfigService service = new YamlConfigService();
+
+        ConfigException exception = assertThrows(ConfigException.class, () -> service.load(ConfigSpec.builder(
+                        ExampleConfig.class,
+                        path
+                )
+                .schemaVersion(1)
+                .defaults(() -> new ExampleConfig("Default", false, 0))
+                .migration(failingMigration(new ConfigException("migration failed", migrationPath, null)))
+                .build()));
+
+        assertEquals("migration failed", exception.getMessage());
+        assertEquals(migrationPath, exception.pathOptional().orElseThrow());
+        assertEquals("migrate", exception.operationOptional().orElseThrow());
+    }
+
+    @Test
+    void validationFailureIncludesPathAndOperation() throws Exception {
+        Path path = tempDir.resolve("invalid.yml");
+        YamlConfigService service = new YamlConfigService();
+        ConfigSpec<ExampleConfig> spec = ConfigSpec.builder(ExampleConfig.class, path)
+                .defaults(() -> new ExampleConfig("value", true, 1))
+                .validator(value -> List.of("name is required"))
+                .build();
+
+        ConfigException exception = assertThrows(ConfigException.class, () -> service.load(spec));
+
+        assertEquals(path, exception.pathOptional().orElseThrow());
+        assertEquals("validate", exception.operationOptional().orElseThrow());
+    }
+
+    @Test
+    void oldConfigExceptionConstructorsRemainSupported() {
+        ConfigException exception = new ConfigException("plain");
+
+        assertEquals("plain", exception.getMessage());
+        assertTrue(exception.pathOptional().isEmpty());
+        assertTrue(exception.operationOptional().isEmpty());
+
+        IllegalArgumentException cause = new IllegalArgumentException("cause");
+        ConfigException withCause = new ConfigException("plain", cause);
+
+        assertEquals("plain", withCause.getMessage());
+        assertEquals(cause, withCause.getCause());
+        assertTrue(withCause.pathOptional().isEmpty());
+        assertTrue(withCause.operationOptional().isEmpty());
+    }
+
+    @Test
+    void blankConfigExceptionOperationIsEmpty() {
+        Path path = tempDir.resolve("config.yml");
+        ConfigException exception = new ConfigException("plain", null, path, " ");
+
+        assertEquals(path, exception.pathOptional().orElseThrow());
+        assertTrue(exception.operationOptional().isEmpty());
+    }
+
     @ConfigSerializable
     public record ExampleConfig(String name, boolean enabled, int retries) {
+    }
+
+    private ConfigMigration failingMigration(ConfigException exception) {
+        return new ConfigMigration() {
+            @Override
+            public int fromVersion() {
+                return 0;
+            }
+
+            @Override
+            public int toVersion() {
+                return 1;
+            }
+
+            @Override
+            public void migrate(org.spongepowered.configurate.ConfigurationNode node) throws ConfigException {
+                throw exception;
+            }
+        };
     }
 }
