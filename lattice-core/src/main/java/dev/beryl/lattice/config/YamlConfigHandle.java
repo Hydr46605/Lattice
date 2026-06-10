@@ -26,9 +26,9 @@ final class YamlConfigHandle<T> implements ConfigHandle<T> {
     @Override
     public void update(T value) throws ConfigException {
         Preconditions.requireNonNull(value, "value");
-        var problems = spec.validator().validate(value);
+        var problems = service.validateValue(spec, value);
         if (!problems.isEmpty()) {
-            throw new ConfigException("Invalid config update: " + String.join(", ", problems));
+            throw new ConfigException("Invalid config update: " + String.join(", ", problems), spec.path(), "validate");
         }
         this.value = value;
     }

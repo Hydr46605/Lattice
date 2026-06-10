@@ -191,7 +191,7 @@ public final class YamlConfigService implements ConfigService {
         }
     }
 
-    private <T> List<String> validateValue(ConfigSpec<T> spec, T value) throws ConfigException {
+    <T> List<String> validateValue(ConfigSpec<T> spec, T value) throws ConfigException {
         try {
             return spec.validator().validate(value);
         } catch (RuntimeException exception) {

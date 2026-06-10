@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.spongepowered.configurate.objectmapping.ConfigSerializable;
@@ -118,6 +119,53 @@ class YamlConfigServiceTest {
                 .build());
 
         assertEquals(new ExampleConfig("Beryl", false, 9), reloaded.value());
+    }
+
+    @Test
+    void updateValidationFailureIncludesPathAndOperation() throws Exception {
+        Path path = tempDir.resolve("config.yml");
+        YamlConfigService service = new YamlConfigService();
+        ExampleConfig initial = new ExampleConfig("Lattice", true, 3);
+        ConfigHandle<ExampleConfig> handle = service.load(ConfigSpec.builder(ExampleConfig.class, path)
+                .schemaVersion(1)
+                .defaults(() -> initial)
+                .validator(value -> value.retries() < 0 ? List.of("retries cannot be negative") : List.of())
+                .build());
+
+        ConfigException exception = assertThrows(
+                ConfigException.class,
+                () -> handle.update(new ExampleConfig("Beryl", false, -1))
+        );
+
+        assertEquals(path, exception.pathOptional().orElseThrow());
+        assertEquals("validate", exception.operationOptional().orElseThrow());
+        assertEquals(initial, handle.value());
+    }
+
+    @Test
+    void updateValidatorRuntimeFailureIncludesPathAndOperation() throws Exception {
+        Path path = tempDir.resolve("config.yml");
+        YamlConfigService service = new YamlConfigService();
+        AtomicInteger validations = new AtomicInteger();
+        ConfigHandle<ExampleConfig> handle = service.load(ConfigSpec.builder(ExampleConfig.class, path)
+                .schemaVersion(1)
+                .defaults(() -> new ExampleConfig("Lattice", true, 3))
+                .validator(value -> {
+                    if (validations.incrementAndGet() == 1) {
+                        return List.of();
+                    }
+                    throw new IllegalStateException("validator failed");
+                })
+                .build());
+
+        ConfigException exception = assertThrows(
+                ConfigException.class,
+                () -> handle.update(new ExampleConfig("Beryl", false, 9))
+        );
+
+        assertEquals(path, exception.pathOptional().orElseThrow());
+        assertEquals("validate", exception.operationOptional().orElseThrow());
+        assertTrue(exception.getCause() instanceof IllegalStateException);
     }
 
     @Test
