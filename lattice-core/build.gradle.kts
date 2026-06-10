@@ -24,7 +24,7 @@ val generatedVersionSource = generatedVersionSourceDirectory.map {
 
 val generateLatticeBuildVersion by tasks.registering {
     inputs.property("version", project.version.toString())
-    outputs.file(generatedVersionSource)
+    outputs.dir(generatedVersionSourceDirectory)
 
     doLast {
         val output = generatedVersionSource.get().asFile
@@ -44,8 +44,11 @@ val generateLatticeBuildVersion by tasks.registering {
     }
 }
 
+val generatedVersionSources = files(generatedVersionSourceDirectory)
+    .builtBy(generateLatticeBuildVersion)
+
 sourceSets.named("main") {
-    java.srcDir(generatedVersionSourceDirectory)
+    java.srcDir(generatedVersionSources)
 }
 
 tasks.named("compileJava") {
