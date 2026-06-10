@@ -136,14 +136,18 @@ git push origin v0.8.3
 
 Manual runs default to `prerelease=false`. Tag pushes infer prerelease status from the version name: only suffixes labeled `alpha`, `beta`, `rc`, `snapshot`, or `dev`, with optional qualifiers, are marked as prereleases. A normal `v0.8.3` tag is a stable release.
 
-The workflow checks that the requested version matches `latticeVersion` in `gradle.properties`. Stable GitHub Releases are marked as latest. Prereleases are marked as prereleases and are not promoted to latest.
+When the matching `v<version>` tag already exists, the workflow checks out that tag before validating, building, publishing, and refreshing the GitHub Release. This keeps recovery runs tied to the same commit as the release tag. If the tag does not exist, the workflow uses the current checkout and creates the GitHub Release against that commit.
+
+The workflow checks that the requested version matches `latticeVersion` in `gradle.properties` after the release ref is selected. Stable GitHub Releases are marked as latest. Prereleases are marked as prereleases and are not promoted to latest. Existing GitHub Releases are refreshed only when the built commit matches the release tag.
 
 The manual publish switches are for recovery, not for the normal first attempt:
 
 - Keep `publish_maven_central=true`, `publish_github_packages=true`, and `create_github_release=true` for a normal release.
-- Set `publish_maven_central=false` only when Maven Central already has the immutable version, including after the known `publishing_timeout` result or after a later step failed in a previous run.
+- Set `publish_maven_central=false` only when Maven Central already has the immutable version, including after the known `publishing_timeout` result or after a later step failed in a previous run. When this is false, the generated GitHub Release notes say that Central was not published in that workflow run.
 - Set `publish_github_packages=false` when recovering after the mirror has already been published, or when the mirror should not be touched on the rerun. If a GitHub Release is created while this is false, the generated notes will not add the mirror line.
 - Set `create_github_release=false` when repairing package publication without changing the GitHub Release page. Release notes are validated only when this switch is true.
+
+If Maven Central reaches the known `publishing_timeout` state, the GitHub Release can still be created or refreshed. In that case the generated notes describe Central as still finalizing, rather than claiming the coordinates are immediately resolvable.
 
 After the workflow finishes, verify:
 

@@ -70,12 +70,6 @@ jobs:
             version="$(grep '^latticeVersion=' gradle.properties | cut -d= -f2)"
           fi
 
-          project_version="$(grep '^latticeVersion=' gradle.properties | cut -d= -f2)"
-          if [[ "${project_version}" != "${version}" ]]; then
-            echo "::error::Release version ${version} does not match gradle.properties (${project_version})."
-            exit 1
-          fi
-
           prerelease="false"
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
             prerelease="${{ inputs.prerelease }}"
@@ -105,6 +99,50 @@ jobs:
           echo "publish_maven_central=${publish_maven_central}" >> "${GITHUB_OUTPUT}"
           echo "publish_github_packages=${publish_github_packages}" >> "${GITHUB_OUTPUT}"
           echo "create_github_release=${create_github_release}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout release ref
+        id: release_ref
+        shell: bash
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          tag_exists="false"
+          tag_commit=""
+
+          if ! git fetch --force origin "refs/tags/${TAG}:refs/tags/${TAG}"; then
+            if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+              echo "::error::Unable to fetch release tag ${TAG}."
+              exit 1
+            fi
+            echo "::notice::Release tag ${TAG} was not found; using the current checkout."
+          fi
+
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            tag_exists="true"
+            git checkout --detach "refs/tags/${TAG}"
+            tag_commit="$(git rev-parse "${TAG}^{commit}")"
+          fi
+
+          commit="$(git rev-parse HEAD)"
+          if [[ "${tag_exists}" == "true" && "${commit}" != "${tag_commit}" ]]; then
+            echo "::error::Release checkout ${commit} does not match ${TAG} (${tag_commit})."
+            exit 1
+          fi
+
+          echo "commit=${commit}" >> "${GITHUB_OUTPUT}"
+          echo "tag_exists=${tag_exists}" >> "${GITHUB_OUTPUT}"
+          echo "tag_commit=${tag_commit}" >> "${GITHUB_OUTPUT}"
+
+      - name: Verify release version
+        shell: bash
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          project_version="$(grep '^latticeVersion=' gradle.properties | cut -d= -f2)"
+          if [[ "${project_version}" != "${VERSION}" ]]; then
+            echo "::error::Release version ${VERSION} does not match gradle.properties (${project_version})."
+            exit 1
+          fi
 
       - name: Prepare release notes
         if: steps.release.outputs.create_github_release == 'true'
@@ -201,16 +239,31 @@ jobs:
         env:
           VERSION: ${{ steps.release.outputs.version }}
           GITHUB_PACKAGES_STATUS: ${{ steps.github_packages.outputs.status }}
+          MAVEN_CENTRAL_STATUS: ${{ steps.maven_central.outputs.status }}
+          PUBLISH_MAVEN_CENTRAL: ${{ steps.release.outputs.publish_maven_central }}
         run: |
           cp build/release/notes.base.md build/release/notes.md
           cat >> build/release/notes.md <<NOTES
 
           ## Artifacts
 
+          NOTES
+
+          if [[ "${PUBLISH_MAVEN_CENTRAL}" == "false" ]]; then
+            cat >> build/release/notes.md <<NOTES
+          - Maven Central: not published in this workflow run; verify the \`io.github.hydr46605\` ${VERSION} coordinates before use
+          NOTES
+          elif [[ "${MAVEN_CENTRAL_STATUS}" == "publishing_timeout" ]]; then
+            cat >> build/release/notes.md <<NOTES
+          - Maven Central: publishing is still finalizing; \`io.github.hydr46605\` ${VERSION} coordinates may not resolve immediately
+          NOTES
+          else
+            cat >> build/release/notes.md <<NOTES
           - Maven Central: \`io.github.hydr46605:lattice-api:${VERSION}\`
           - Maven Central: \`io.github.hydr46605:lattice-core:${VERSION}\`
           - Maven Central: \`io.github.hydr46605:lattice-paper:${VERSION}\`
           NOTES
+          fi
 
           if [[ "${GITHUB_PACKAGES_STATUS}" == "success" ]]; then
             cat >> build/release/notes.md <<NOTES
@@ -236,6 +289,9 @@ jobs:
           TAG: ${{ steps.release.outputs.tag }}
           VERSION: ${{ steps.release.outputs.version }}
           PRERELEASE: ${{ steps.release.outputs.prerelease }}
+          RELEASE_COMMIT: ${{ steps.release_ref.outputs.commit }}
+          TAG_EXISTS: ${{ steps.release_ref.outputs.tag_exists }}
+          TAG_COMMIT: ${{ steps.release_ref.outputs.tag_commit }}
         run: |
           artifacts=(
             "lattice-api/build/libs/lattice-api-${VERSION}.jar"
@@ -256,6 +312,14 @@ jobs:
           fi
 
           if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            if [[ "${TAG_EXISTS}" != "true" ]]; then
+              echo "::error::GitHub Release ${TAG} exists, but the matching git tag was not found locally."
+              exit 1
+            fi
+            if [[ "${TAG_COMMIT}" != "${RELEASE_COMMIT}" ]]; then
+              echo "::error::Refusing to upload assets built from ${RELEASE_COMMIT}; ${TAG} points at ${TAG_COMMIT}."
+              exit 1
+            fi
             release_id="$(gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json databaseId --jq '.databaseId')"
             python3 - <<'PY'
           import json
@@ -266,7 +330,7 @@ jobs:
           payload = {
               "name": f"Lattice {os.environ['VERSION']}",
               "body": Path("build/release/notes.md").read_text(encoding="utf-8"),
-              "target_commitish": os.environ["GITHUB_SHA"],
+              "target_commitish": os.environ["RELEASE_COMMIT"],
               "prerelease": prerelease,
               "make_latest": "false" if prerelease else "true",
           }
@@ -281,7 +345,7 @@ jobs:
           else
             gh release create "${TAG}" "${artifacts[@]}" \
               --repo "${GITHUB_REPOSITORY}" \
-              --target "${GITHUB_SHA}" \
+              --target "${RELEASE_COMMIT}" \
               --title "Lattice ${VERSION}" \
               --notes-file build/release/notes.md \
               "${create_flags[@]}"
