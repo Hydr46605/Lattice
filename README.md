@@ -15,7 +15,7 @@
 <p align="center">
   <img alt="Java 21" src="https://img.shields.io/badge/Java-21-orange">
   <img alt="Paper 1.21.11" src="https://img.shields.io/badge/Paper-1.21.11-2ea44f">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.8.3-blue">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.8.4-blue">
   <img alt="Status" src="https://img.shields.io/badge/API-pre--1.0_beta-yellow">
 </p>
 
@@ -87,7 +87,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.github.hydr46605:lattice-paper:0.8.3")
+    compileOnly("io.github.hydr46605:lattice-paper:0.8.4")
 }
 ```
 
