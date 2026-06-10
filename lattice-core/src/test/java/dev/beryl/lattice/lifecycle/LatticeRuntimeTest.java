@@ -2,6 +2,7 @@ package dev.beryl.lattice.lifecycle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.beryl.lattice.module.LatticeModule;
 import dev.beryl.lattice.module.ModuleDescriptor;
@@ -65,6 +66,83 @@ class LatticeRuntimeTest {
 
         assertEquals(List.of("good:load", "bad:load", "good:disable", "service:close"), events);
         assertEquals(LifecyclePhase.FAILED, runtime.phase());
+    }
+
+    @Test
+    void loadFailureIncludesRuntimePhaseOperationAndModuleContext() {
+        List<String> events = new ArrayList<>();
+        LatticeRuntime runtime = LatticeRuntime.builder("diagnostic-runtime")
+                .module(new RecordingModule("good", events))
+                .module(new FailingLoadModule("bad", events))
+                .build();
+
+        LifecycleException exception = assertThrows(LifecycleException.class, runtime::load);
+
+        assertEquals("diagnostic-runtime", exception.runtimeIdOptional().orElseThrow());
+        assertEquals(LifecyclePhase.FAILED, exception.phaseOptional().orElseThrow());
+        assertEquals("load", exception.operationOptional().orElseThrow());
+        assertEquals("bad", exception.moduleIdOptional().orElseThrow());
+    }
+
+    @Test
+    void enableFailureIncludesRuntimePhaseOperationAndModuleContext() {
+        List<String> events = new ArrayList<>();
+        LatticeRuntime runtime = LatticeRuntime.builder("diagnostic-runtime")
+                .module(new RecordingModule("good", events))
+                .module(new FailingEnableModule("bad", events))
+                .build();
+
+        LifecycleException exception = assertThrows(LifecycleException.class, runtime::enable);
+
+        assertEquals("diagnostic-runtime", exception.runtimeIdOptional().orElseThrow());
+        assertEquals(LifecyclePhase.FAILED, exception.phaseOptional().orElseThrow());
+        assertEquals("enable", exception.operationOptional().orElseThrow());
+        assertEquals("bad", exception.moduleIdOptional().orElseThrow());
+    }
+
+    @Test
+    void readyFailureIncludesRuntimePhaseOperationAndModuleContext() {
+        List<String> events = new ArrayList<>();
+        LatticeRuntime runtime = LatticeRuntime.builder("diagnostic-runtime")
+                .module(new RecordingModule("good", events))
+                .module(new FailingReadyModule("bad", events))
+                .build();
+
+        LifecycleException exception = assertThrows(LifecycleException.class, runtime::enable);
+
+        assertEquals("diagnostic-runtime", exception.runtimeIdOptional().orElseThrow());
+        assertEquals(LifecyclePhase.FAILED, exception.phaseOptional().orElseThrow());
+        assertEquals("ready", exception.operationOptional().orElseThrow());
+        assertEquals("bad", exception.moduleIdOptional().orElseThrow());
+    }
+
+    @Test
+    void disableFailureIncludesRuntimePhaseOperationAndModuleContext() {
+        List<String> events = new ArrayList<>();
+        LatticeRuntime runtime = LatticeRuntime.builder("diagnostic-runtime")
+                .module(new FailingDisableModule("core", events))
+                .build();
+
+        runtime.enable();
+        LifecycleException exception = assertThrows(LifecycleException.class, runtime::disable);
+
+        assertEquals("diagnostic-runtime", exception.runtimeIdOptional().orElseThrow());
+        assertEquals(LifecyclePhase.FAILED, exception.phaseOptional().orElseThrow());
+        assertEquals("disable", exception.operationOptional().orElseThrow());
+        assertEquals("core", exception.moduleIdOptional().orElseThrow());
+    }
+
+    @Test
+    void oldLifecycleExceptionConstructorRemainsSupported() {
+        RuntimeException cause = new RuntimeException("boom");
+        LifecycleException exception = new LifecycleException("message", cause);
+
+        assertEquals("message", exception.getMessage());
+        assertEquals(cause, exception.getCause());
+        assertTrue(exception.runtimeIdOptional().isEmpty());
+        assertTrue(exception.phaseOptional().isEmpty());
+        assertTrue(exception.operationOptional().isEmpty());
+        assertTrue(exception.moduleIdOptional().isEmpty());
     }
 
     @Test
@@ -160,6 +238,34 @@ class LatticeRuntimeTest {
         public void onLoad(LatticeContext context) {
             events.add(id + ":load");
             throw new IllegalStateException("boom");
+        }
+    }
+
+    private record FailingReadyModule(String id, List<String> events) implements LatticeModule {
+        @Override
+        public ModuleDescriptor descriptor() {
+            return ModuleDescriptor.of(id);
+        }
+
+        @Override
+        public void onLoad(LatticeContext context) {
+            events.add(id + ":load");
+        }
+
+        @Override
+        public void onEnable(LatticeContext context) {
+            events.add(id + ":enable");
+        }
+
+        @Override
+        public void onReady(LatticeContext context) {
+            events.add(id + ":ready");
+            throw new IllegalStateException("boom");
+        }
+
+        @Override
+        public void onDisable(LatticeContext context) {
+            events.add(id + ":disable");
         }
     }
 

@@ -7,6 +7,7 @@ import dev.beryl.lattice.diagnostics.DiagnosticService;
 import dev.beryl.lattice.diagnostics.RuntimeDiagnosticContributor;
 import dev.beryl.lattice.hook.PluginHookService;
 import dev.beryl.lattice.integration.IntegrationManager;
+import dev.beryl.lattice.module.ModuleLifecycleException;
 import dev.beryl.lattice.module.ModuleManager;
 import dev.beryl.lattice.service.ServiceKey;
 import dev.beryl.lattice.service.SimpleServiceRegistry;
@@ -59,7 +60,7 @@ public final class LatticeRuntime {
             phase = LifecyclePhase.FAILED;
             cleanupAfterFailure(exception);
             startupReport.finish(false);
-            throw new LifecycleException("Failed to load Lattice runtime " + context.runtimeId(), exception);
+            throw lifecycleException("Failed to load Lattice runtime " + context.runtimeId(), "load", exception);
         }
     }
 
@@ -86,7 +87,7 @@ public final class LatticeRuntime {
             phase = LifecyclePhase.FAILED;
             cleanupAfterFailure(exception);
             startupReport.finish(false);
-            throw new LifecycleException("Failed to enable Lattice runtime " + context.runtimeId(), exception);
+            throw lifecycleException("Failed to enable Lattice runtime " + context.runtimeId(), "enable", exception);
         }
     }
 
@@ -106,7 +107,7 @@ public final class LatticeRuntime {
             return;
         }
         phase = LifecyclePhase.FAILED;
-        throw new LifecycleException("Failed to disable Lattice runtime " + context.runtimeId(), failure);
+        throw lifecycleException("Failed to disable Lattice runtime " + context.runtimeId(), "disable", failure);
     }
 
     public LatticeContext context() {
@@ -129,6 +130,24 @@ public final class LatticeRuntime {
         collectFailure(primary, () -> modules.disableAll(context));
         collectFailure(primary, this::cancelTasks);
         collectFailure(primary, services::close);
+    }
+
+    private LifecycleException lifecycleException(String message, String operation, Exception failure) {
+        ModuleLifecycleException moduleFailure = moduleFailure(failure);
+        String failureOperation = moduleFailure == null ? operation : moduleFailure.operation();
+        String moduleId = moduleFailure == null ? null : moduleFailure.moduleId().value();
+        return new LifecycleException(message, failure, context.runtimeId(), phase, failureOperation, moduleId);
+    }
+
+    private ModuleLifecycleException moduleFailure(Throwable failure) {
+        Throwable current = failure;
+        while (current != null) {
+            if (current instanceof ModuleLifecycleException moduleFailure) {
+                return moduleFailure;
+            }
+            current = current.getCause();
+        }
+        return null;
     }
 
     private Exception collectFailure(Exception current, CleanupStep step) {

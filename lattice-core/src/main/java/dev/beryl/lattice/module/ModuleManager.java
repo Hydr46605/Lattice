@@ -39,21 +39,33 @@ public final class ModuleManager {
 
     public void loadAll(LatticeContext context) throws Exception {
         for (LatticeModule module : resolve().order()) {
-            module.onLoad(context);
+            try {
+                module.onLoad(context);
+            } catch (Exception exception) {
+                throw new ModuleLifecycleException("load", module.descriptor().id(), exception);
+            }
             loaded.add(module);
         }
     }
 
     public void enableAll(LatticeContext context) throws Exception {
         for (LatticeModule module : resolve().order()) {
-            module.onEnable(context);
+            try {
+                module.onEnable(context);
+            } catch (Exception exception) {
+                throw new ModuleLifecycleException("enable", module.descriptor().id(), exception);
+            }
             enabled.add(module);
         }
     }
 
     public void readyAll(LatticeContext context) throws Exception {
         for (LatticeModule module : resolve().order()) {
-            module.onReady(context);
+            try {
+                module.onReady(context);
+            } catch (Exception exception) {
+                throw new ModuleLifecycleException("ready", module.descriptor().id(), exception);
+            }
         }
     }
 
@@ -68,10 +80,12 @@ public final class ModuleManager {
             try {
                 module.onDisable(context);
             } catch (Exception exception) {
+                ModuleLifecycleException moduleFailure =
+                        new ModuleLifecycleException("disable", module.descriptor().id(), exception);
                 if (failure == null) {
-                    failure = exception;
+                    failure = moduleFailure;
                 } else {
-                    failure.addSuppressed(exception);
+                    failure.addSuppressed(moduleFailure);
                 }
             }
         }
