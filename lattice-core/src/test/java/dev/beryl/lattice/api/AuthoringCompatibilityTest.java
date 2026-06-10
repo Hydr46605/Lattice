@@ -8,15 +8,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.beryl.lattice.command.CommandExceptionMapper;
 import dev.beryl.lattice.command.CommandNode;
 import dev.beryl.lattice.command.CommandService;
+import dev.beryl.lattice.config.ConfigException;
 import dev.beryl.lattice.config.ConfigHandle;
 import dev.beryl.lattice.config.ConfigSpec;
 import dev.beryl.lattice.diagnostics.CommandDiagnostics;
+import dev.beryl.lattice.diagnostics.DefaultDiagnosticService;
 import dev.beryl.lattice.diagnostics.DiagnosticService;
 import dev.beryl.lattice.diagnostics.DiagnosticSnapshot;
 import dev.beryl.lattice.hook.HookKey;
 import dev.beryl.lattice.hook.PluginHookService;
 import dev.beryl.lattice.lifecycle.LatticeContext;
 import dev.beryl.lattice.lifecycle.LatticeRuntime;
+import dev.beryl.lattice.lifecycle.LifecycleException;
 import dev.beryl.lattice.lifecycle.LifecyclePhase;
 import dev.beryl.lattice.module.LatticeModule;
 import dev.beryl.lattice.module.ModuleDescriptor;
@@ -118,6 +121,28 @@ class AuthoringCompatibilityTest {
                 .build();
 
         assertSame(mapper, runtime.context().require(LatticeRuntime.COMMAND_EXCEPTION_MAPPER));
+    }
+
+    @Test
+    void diagnosticContextAdditionsRemainSourceCompatible() {
+        LifecycleException lifecycle = new LifecycleException("message", new RuntimeException("cause"));
+        assertTrue(lifecycle.runtimeIdOptional().isEmpty());
+        assertTrue(lifecycle.phaseOptional().isEmpty());
+        assertTrue(lifecycle.operationOptional().isEmpty());
+        assertTrue(lifecycle.moduleIdOptional().isEmpty());
+
+        ConfigException config = new ConfigException("message");
+        assertTrue(config.pathOptional().isEmpty());
+        assertTrue(config.operationOptional().isEmpty());
+
+        DiagnosticService customDiagnostics = new DefaultDiagnosticService();
+        LatticeRuntime runtime = LatticeRuntime.builder("compatibility")
+                .diagnosticService(customDiagnostics)
+                .build();
+        assertSame(customDiagnostics, runtime.context().require(LatticeRuntime.DIAGNOSTIC_SERVICE));
+
+        DiagnosticSnapshot diagnostics = runtime.context().require(LatticeRuntime.DIAGNOSTIC_SERVICE).snapshot();
+        assertEquals("lattice", diagnostics.id());
     }
 
     private static final class AuthoringModule implements LatticeModule {
