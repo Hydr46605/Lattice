@@ -108,8 +108,12 @@ final class StandaloneLatticeHost implements LatticeHost {
     synchronized void disableManagedPlugins() {
         List<HostedPluginHandle> snapshot = new ArrayList<>(handles.values());
         Collections.reverse(snapshot);
+        RuntimeException failure = null;
         for (HostedPluginHandle handle : snapshot) {
-            handle.disable();
+            failure = collectFailure(failure, handle::disable);
+        }
+        if (failure != null) {
+            throw failure;
         }
     }
 
@@ -119,13 +123,30 @@ final class StandaloneLatticeHost implements LatticeHost {
             return;
         }
         closed = true;
-        disableManagedPlugins();
-        dataSources.close();
+        RuntimeException failure = null;
+        failure = collectFailure(failure, this::disableManagedPlugins);
+        failure = collectFailure(failure, dataSources::close);
         handles.clear();
+        if (failure != null) {
+            throw failure;
+        }
     }
 
     private synchronized void unregister(String pluginName) {
         handles.remove(pluginName);
+    }
+
+    private RuntimeException collectFailure(RuntimeException current, RuntimeStep step) {
+        try {
+            step.run();
+            return current;
+        } catch (RuntimeException exception) {
+            if (current == null) {
+                return exception;
+            }
+            current.addSuppressed(exception);
+            return current;
+        }
     }
 
     private DiagnosticSnapshot pluginSnapshot(LatticePluginHandle handle) {
@@ -184,5 +205,10 @@ final class StandaloneLatticeHost implements LatticeHost {
         public DiagnosticSnapshot snapshot() {
             return host.diagnostics();
         }
+    }
+
+    @FunctionalInterface
+    private interface RuntimeStep {
+        void run();
     }
 }

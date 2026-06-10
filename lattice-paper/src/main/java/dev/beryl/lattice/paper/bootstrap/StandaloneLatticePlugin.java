@@ -37,20 +37,42 @@ public final class StandaloneLatticePlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        RuntimeException failure = null;
         if (host != null) {
-            host.disableManagedPlugins();
+            failure = collectFailure(failure, host::disableManagedPlugins);
         }
         if (runtime != null) {
-            runtime.disable();
+            failure = collectFailure(failure, runtime::disable);
         }
         if (host != null) {
-            getServer().getServicesManager().unregister(LatticeHost.class, host);
-            host.close();
+            failure = collectFailure(failure, () -> getServer().getServicesManager().unregister(LatticeHost.class, host));
+            failure = collectFailure(failure, host::close);
+        }
+        if (failure != null) {
+            throw failure;
         }
     }
 
     private void registerDefaultIntegrations(LatticeRuntime runtime) {
         runtime.context().find(LatticeRuntime.INTEGRATION_SERVICE)
                 .ifPresent(integrations -> PaperIntegrationBootstrap.registerDefaults(this, integrations));
+    }
+
+    private RuntimeException collectFailure(RuntimeException current, RuntimeStep step) {
+        try {
+            step.run();
+            return current;
+        } catch (RuntimeException exception) {
+            if (current == null) {
+                return exception;
+            }
+            current.addSuppressed(exception);
+            return current;
+        }
+    }
+
+    @FunctionalInterface
+    private interface RuntimeStep {
+        void run();
     }
 }
