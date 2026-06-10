@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 @InternalApi
@@ -87,21 +88,51 @@ public final class RuntimeDiagnosticContributor implements DiagnosticContributor
     }
 
     private DiagnosticSnapshot lifecycleSnapshot() {
+        LifecyclePhase currentPhase = phase.get();
+        List<StartupReport.Entry> entries = startupReport.entries();
+        Optional<StartupReport.Entry> failed = lastFailedEntry(entries);
         Map<String, String> details = new LinkedHashMap<>();
         details.put("runtimeId", runtimeId);
-        details.put("phase", phase.get().name());
+        details.put("phase", currentPhase.name());
         details.put("successful", Boolean.toString(startupReport.successful()));
         details.put("durationMillis", Long.toString(startupReport.duration().toMillis()));
         details.put("events", String.join(",", startupReport.events()));
+        details.put("eventCount", Integer.toString(entries.size()));
+        failed.ifPresent(entry -> {
+            details.put("failure.operation", entry.operation());
+            if (entry.moduleId() != null) {
+                details.put("failure.module", entry.moduleId());
+            }
+            if (entry.message() != null) {
+                details.put("failure.message", entry.message());
+            }
+        });
+        List<DiagnosticFinding> findings = new ArrayList<>();
+        if (currentPhase == LifecyclePhase.FAILED || failed.isPresent()) {
+            findings.add(DiagnosticFinding.error(
+                    "lifecycle.failure",
+                    "Runtime startup did not complete successfully"
+            ));
+        }
         return new DiagnosticSnapshot(
                 "lifecycle",
-                phase.get() == LifecyclePhase.FAILED ? DiagnosticStatus.ERROR : DiagnosticStatus.OK,
+                currentPhase == LifecyclePhase.FAILED ? DiagnosticStatus.ERROR : DiagnosticStatus.OK,
                 "Runtime lifecycle",
                 details,
-                List.of(),
+                findings,
                 List.of(),
                 Instant.now()
         );
+    }
+
+    private Optional<StartupReport.Entry> lastFailedEntry(List<StartupReport.Entry> entries) {
+        for (int index = entries.size() - 1; index >= 0; index--) {
+            StartupReport.Entry entry = entries.get(index);
+            if ("failed".equals(entry.outcome())) {
+                return Optional.of(entry);
+            }
+        }
+        return Optional.empty();
     }
 
     private DiagnosticSnapshot moduleSnapshot() {

@@ -72,6 +72,54 @@ class DefaultDiagnosticServiceTest {
     }
 
     @Test
+    void lifecycleDiagnosticsDoNotReportFailureForBrandNewRuntime() {
+        LatticeRuntime runtime = LatticeRuntime.builder("diagnostics").build();
+
+        DiagnosticSnapshot lifecycle = child(
+                runtime.context().require(LatticeRuntime.DIAGNOSTIC_SERVICE).snapshot("runtime").orElseThrow(),
+                "lifecycle"
+        );
+
+        assertEquals(DiagnosticStatus.OK, lifecycle.status());
+        assertFalse(lifecycle.findings().stream().anyMatch(finding -> finding.id().equals("lifecycle.failure")));
+    }
+
+    @Test
+    void lifecycleDiagnosticsExposeStartupFailureContext() {
+        LatticeRuntime runtime = LatticeRuntime.builder("diagnostics")
+                .module(new LatticeModule() {
+                    @Override
+                    public ModuleDescriptor descriptor() {
+                        return ModuleDescriptor.of("broken");
+                    }
+
+                    @Override
+                    public void onEnable(dev.beryl.lattice.lifecycle.LatticeContext context) {
+                        throw new IllegalStateException("cannot enable");
+                    }
+                })
+                .build();
+        DiagnosticService diagnostics = runtime.context().require(LatticeRuntime.DIAGNOSTIC_SERVICE);
+
+        assertThrows(dev.beryl.lattice.lifecycle.LifecycleException.class, runtime::enable);
+
+        DiagnosticSnapshot lifecycle = child(
+                diagnostics.snapshot("runtime").orElseThrow(),
+                "lifecycle"
+        );
+
+        assertEquals(DiagnosticStatus.ERROR, lifecycle.status());
+        assertEquals("2", lifecycle.details().get("eventCount"));
+        assertEquals("enable", lifecycle.details().get("failure.operation"));
+        assertEquals("broken", lifecycle.details().get("failure.module"));
+        String failureMessage = lifecycle.details().get("failure.message");
+        assertTrue(failureMessage != null && !failureMessage.isBlank());
+        assertTrue(failureMessage.contains("broken"));
+        assertTrue(failureMessage.contains("enable"));
+        assertTrue(lifecycle.findings().stream().anyMatch(finding -> finding.id().equals("lifecycle.failure")));
+    }
+
+    @Test
     void runtimeDiagnosticsExposeIntegrationDetailsHooksAndCommandTree() {
         IntegrationKey<ExampleIntegration> key = new IntegrationKey<>("example", ExampleIntegration.class);
         DefaultIntegrationManager integrations = new DefaultIntegrationManager();
