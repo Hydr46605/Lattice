@@ -1,10 +1,13 @@
 package dev.beryl.lattice.paper.bootstrap;
 
-import dev.beryl.lattice.lifecycle.LatticeBuilder;
-import dev.beryl.lattice.lifecycle.LatticeRuntime;
+import dev.beryl.lattice.command.CommandExceptionMappers;
+import dev.beryl.lattice.command.CommandExceptionMapper;
+import dev.beryl.lattice.command.CommandService;
 import dev.beryl.lattice.config.YamlConfigService;
 import dev.beryl.lattice.integration.DefaultIntegrationManager;
 import dev.beryl.lattice.integration.IntegrationManager;
+import dev.beryl.lattice.lifecycle.LatticeBuilder;
+import dev.beryl.lattice.lifecycle.LatticeRuntime;
 import dev.beryl.lattice.paper.command.PaperCommandRegistrar;
 import dev.beryl.lattice.paper.diagnostics.PaperDiagnostics;
 import dev.beryl.lattice.paper.hook.PaperPluginHookService;
@@ -54,17 +57,35 @@ public final class LatticePaper {
 
         LatticeBuilder builder = LatticeRuntime.builder(plugin.getName())
                 .service(PaperServices.JAVA_PLUGIN, plugin)
-                .service(LatticeRuntime.COMMAND_SERVICE, new PaperCommandRegistrar(plugin))
                 .integrationService(integrations)
                 .hookService(new PaperPluginHookService(plugin))
                 .taskService(tasks)
                 .uiService(new PaperUiService(plugin, tasks, integrations))
                 .storageService(storageService);
         customizer.accept(builder);
+        builder.defaultService(LatticeRuntime.COMMAND_EXCEPTION_MAPPER, CommandExceptionMappers.defaultMapper());
+        defaultCommandService(
+                builder,
+                mapper -> new PaperCommandRegistrar(plugin, mapper)
+        );
         builder.configService(new YamlConfigService(new BraceTemplateRenderer(), variables));
         LatticeRuntime runtime = builder.build();
         PaperDiagnostics.register(plugin, runtime);
         return runtime;
+    }
+
+    static void defaultCommandService(LatticeBuilder builder, CommandServiceFactory commandService) {
+        Preconditions.requireNonNull(builder, "builder");
+        Preconditions.requireNonNull(commandService, "commandService");
+        if (!builder.hasService(LatticeRuntime.COMMAND_SERVICE)) {
+            CommandExceptionMapper mapper = builder.requireService(LatticeRuntime.COMMAND_EXCEPTION_MAPPER);
+            builder.service(LatticeRuntime.COMMAND_SERVICE, commandService.create(mapper));
+        }
+    }
+
+    @FunctionalInterface
+    interface CommandServiceFactory {
+        CommandService create(CommandExceptionMapper mapper);
     }
 
     private static boolean declaresRequiredLatticeDependency(JavaPlugin plugin) {

@@ -1,8 +1,11 @@
 package dev.beryl.lattice.api;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.beryl.lattice.command.CommandExceptionMapper;
 import dev.beryl.lattice.command.CommandNode;
 import dev.beryl.lattice.command.CommandService;
 import dev.beryl.lattice.config.ConfigHandle;
@@ -37,6 +40,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import net.kyori.adventure.text.Component;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.spongepowered.configurate.objectmapping.ConfigSerializable;
@@ -76,6 +80,44 @@ class AuthoringCompatibilityTest {
         assertTrue(commands.commands().stream().anyMatch(snapshot -> snapshot.name().equals("sample")));
 
         runtime.disable();
+    }
+
+    @Test
+    void typedServiceHelpersDoNotReplaceExistingServices() {
+        RecordingCommandService existingCommands = new RecordingCommandService();
+        RecordingCommandService ignoredCommands = new RecordingCommandService();
+
+        LatticeRuntime runtime = LatticeRuntime.builder("command-service-default")
+                .service(LatticeRuntime.COMMAND_SERVICE, existingCommands)
+                .commandService(ignoredCommands)
+                .build();
+
+        assertSame(existingCommands, runtime.context().require(LatticeRuntime.COMMAND_SERVICE));
+        assertNotSame(ignoredCommands, runtime.context().require(LatticeRuntime.COMMAND_SERVICE));
+    }
+
+    @Test
+    void pluginAuthorsCanReplaceServicesExplicitly() {
+        RecordingCommandService existingCommands = new RecordingCommandService();
+        RecordingCommandService replacementCommands = new RecordingCommandService();
+
+        LatticeRuntime runtime = LatticeRuntime.builder("command-service-replace")
+                .service(LatticeRuntime.COMMAND_SERVICE, existingCommands)
+                .replaceService(LatticeRuntime.COMMAND_SERVICE, replacementCommands)
+                .build();
+
+        assertSame(replacementCommands, runtime.context().require(LatticeRuntime.COMMAND_SERVICE));
+    }
+
+    @Test
+    void pluginAuthorsCanConfigureCommandExceptionMapper() {
+        CommandExceptionMapper mapper = (throwable, context) -> Component.text("custom failure");
+
+        LatticeRuntime runtime = LatticeRuntime.builder("command-feedback")
+                .commandExceptionMapper(mapper)
+                .build();
+
+        assertSame(mapper, runtime.context().require(LatticeRuntime.COMMAND_EXCEPTION_MAPPER));
     }
 
     private static final class AuthoringModule implements LatticeModule {

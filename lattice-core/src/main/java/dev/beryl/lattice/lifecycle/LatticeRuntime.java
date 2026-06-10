@@ -1,12 +1,13 @@
 package dev.beryl.lattice.lifecycle;
 
-import dev.beryl.lattice.module.ModuleManager;
-import dev.beryl.lattice.config.ConfigService;
+import dev.beryl.lattice.command.CommandExceptionMapper;
 import dev.beryl.lattice.command.CommandService;
+import dev.beryl.lattice.config.ConfigService;
 import dev.beryl.lattice.diagnostics.DiagnosticService;
 import dev.beryl.lattice.diagnostics.RuntimeDiagnosticContributor;
 import dev.beryl.lattice.hook.PluginHookService;
 import dev.beryl.lattice.integration.IntegrationManager;
+import dev.beryl.lattice.module.ModuleManager;
 import dev.beryl.lattice.service.ServiceKey;
 import dev.beryl.lattice.service.SimpleServiceRegistry;
 import dev.beryl.lattice.storage.StorageService;
@@ -17,6 +18,8 @@ import dev.beryl.lattice.ui.UiService;
 public final class LatticeRuntime {
     public static final ServiceKey<TextService> TEXT_SERVICE = ServiceKey.of(TextService.class);
     public static final ServiceKey<CommandService> COMMAND_SERVICE = ServiceKey.of(CommandService.class);
+    public static final ServiceKey<CommandExceptionMapper> COMMAND_EXCEPTION_MAPPER =
+            ServiceKey.of(CommandExceptionMapper.class);
     public static final ServiceKey<ConfigService> CONFIG_SERVICE = ServiceKey.of(ConfigService.class);
     public static final ServiceKey<StorageService> STORAGE_SERVICE = ServiceKey.of(StorageService.class);
     public static final ServiceKey<TaskService> TASK_SERVICE = ServiceKey.of(TaskService.class);
