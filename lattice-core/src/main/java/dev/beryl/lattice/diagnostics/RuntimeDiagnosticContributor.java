@@ -108,15 +108,16 @@ public final class RuntimeDiagnosticContributor implements DiagnosticContributor
             }
         });
         List<DiagnosticFinding> findings = new ArrayList<>();
-        if (currentPhase == LifecyclePhase.FAILED || failed.isPresent()) {
+        boolean lifecycleFailed = currentPhase == LifecyclePhase.FAILED || failed.isPresent();
+        if (lifecycleFailed) {
             findings.add(DiagnosticFinding.error(
                     "lifecycle.failure",
-                    "Runtime startup did not complete successfully"
+                    "Runtime lifecycle operation failed"
             ));
         }
         return new DiagnosticSnapshot(
                 "lifecycle",
-                currentPhase == LifecyclePhase.FAILED ? DiagnosticStatus.ERROR : DiagnosticStatus.OK,
+                lifecycleFailed ? DiagnosticStatus.ERROR : DiagnosticStatus.OK,
                 "Runtime lifecycle",
                 details,
                 findings,

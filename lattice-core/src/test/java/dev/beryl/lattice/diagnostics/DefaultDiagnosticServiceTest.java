@@ -120,6 +120,70 @@ class DefaultDiagnosticServiceTest {
     }
 
     @Test
+    void lifecycleDiagnosticsExposeDisableFailureContext() {
+        LatticeRuntime runtime = LatticeRuntime.builder("diagnostics")
+                .module(new LatticeModule() {
+                    @Override
+                    public ModuleDescriptor descriptor() {
+                        return ModuleDescriptor.of("shutdown-broken");
+                    }
+
+                    @Override
+                    public void onDisable(dev.beryl.lattice.lifecycle.LatticeContext context) {
+                        throw new IllegalStateException("cannot disable");
+                    }
+                })
+                .build();
+        DiagnosticService diagnostics = runtime.context().require(LatticeRuntime.DIAGNOSTIC_SERVICE);
+        runtime.enable();
+
+        assertThrows(dev.beryl.lattice.lifecycle.LifecycleException.class, runtime::disable);
+
+        DiagnosticSnapshot lifecycle = child(
+                diagnostics.snapshot("runtime").orElseThrow(),
+                "lifecycle"
+        );
+
+        assertEquals(DiagnosticStatus.ERROR, lifecycle.status());
+        assertEquals("disable", lifecycle.details().get("failure.operation"));
+        assertEquals("shutdown-broken", lifecycle.details().get("failure.module"));
+        DiagnosticFinding finding = finding(lifecycle, "lifecycle.failure");
+        assertEquals("Runtime lifecycle operation failed", finding.message());
+        assertFalse(finding.message().contains("startup"));
+    }
+
+    @Test
+    void lifecycleDiagnosticsRemainFailedAfterStartupFailureIsDisabled() {
+        LatticeRuntime runtime = LatticeRuntime.builder("diagnostics")
+                .module(new LatticeModule() {
+                    @Override
+                    public ModuleDescriptor descriptor() {
+                        return ModuleDescriptor.of("startup-broken");
+                    }
+
+                    @Override
+                    public void onEnable(dev.beryl.lattice.lifecycle.LatticeContext context) {
+                        throw new IllegalStateException("cannot enable");
+                    }
+                })
+                .build();
+        DiagnosticService diagnostics = runtime.context().require(LatticeRuntime.DIAGNOSTIC_SERVICE);
+
+        assertThrows(dev.beryl.lattice.lifecycle.LifecycleException.class, runtime::enable);
+        runtime.disable();
+
+        DiagnosticSnapshot lifecycle = child(
+                diagnostics.snapshot("runtime").orElseThrow(),
+                "lifecycle"
+        );
+
+        assertEquals(DiagnosticStatus.ERROR, lifecycle.status());
+        assertEquals("DISABLED", lifecycle.details().get("phase"));
+        assertEquals("enable", lifecycle.details().get("failure.operation"));
+        assertEquals("startup-broken", lifecycle.details().get("failure.module"));
+    }
+
+    @Test
     void runtimeDiagnosticsExposeIntegrationDetailsHooksAndCommandTree() {
         IntegrationKey<ExampleIntegration> key = new IntegrationKey<>("example", ExampleIntegration.class);
         DefaultIntegrationManager integrations = new DefaultIntegrationManager();
@@ -209,6 +273,13 @@ class DefaultDiagnosticServiceTest {
     private DiagnosticSnapshot child(DiagnosticSnapshot snapshot, String id) {
         return snapshot.children().stream()
                 .filter(child -> child.id().equals(id))
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private DiagnosticFinding finding(DiagnosticSnapshot snapshot, String id) {
+        return snapshot.findings().stream()
+                .filter(finding -> finding.id().equals(id))
                 .findFirst()
                 .orElseThrow();
     }
