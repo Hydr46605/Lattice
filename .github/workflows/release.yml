@@ -12,6 +12,21 @@ on:
       prerelease:
         description: "Mark the GitHub release as a prerelease."
         required: true
+        default: false
+        type: boolean
+      publish_maven_central:
+        description: "Publish artifacts to Maven Central."
+        required: true
+        default: true
+        type: boolean
+      publish_github_packages:
+        description: "Publish artifacts to the GitHub Packages mirror."
+        required: true
+        default: true
+        type: boolean
+      create_github_release:
+        description: "Create or refresh the GitHub release."
+        required: true
         default: true
         type: boolean
 
@@ -62,18 +77,55 @@ jobs:
           fi
 
           prerelease="false"
-          if [[ "${{ inputs.prerelease }}" == "true" || "${version}" == 0.* ]]; then
-            prerelease="true"
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            prerelease="${{ inputs.prerelease }}"
+          else
+            version_lower="${version,,}"
+            if [[ "${version_lower}" =~ -(alpha|beta|rc|snapshot|dev)([._-]?[0-9a-z]+)*$ ]]; then
+              prerelease="true"
+            fi
           fi
+          [[ "${prerelease}" == "true" ]] || prerelease="false"
+
+          publish_maven_central="true"
+          publish_github_packages="true"
+          create_github_release="true"
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            publish_maven_central="${{ inputs.publish_maven_central }}"
+            publish_github_packages="${{ inputs.publish_github_packages }}"
+            create_github_release="${{ inputs.create_github_release }}"
+          fi
+          [[ "${publish_maven_central}" == "true" ]] || publish_maven_central="false"
+          [[ "${publish_github_packages}" == "true" ]] || publish_github_packages="false"
+          [[ "${create_github_release}" == "true" ]] || create_github_release="false"
 
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
           echo "tag=v${version}" >> "${GITHUB_OUTPUT}"
           echo "prerelease=${prerelease}" >> "${GITHUB_OUTPUT}"
+          echo "publish_maven_central=${publish_maven_central}" >> "${GITHUB_OUTPUT}"
+          echo "publish_github_packages=${publish_github_packages}" >> "${GITHUB_OUTPUT}"
+          echo "create_github_release=${create_github_release}" >> "${GITHUB_OUTPUT}"
+
+      - name: Prepare release notes
+        if: steps.release.outputs.create_github_release == 'true'
+        shell: bash
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          mkdir -p build/release
+          notes_file="docs/release-notes/${VERSION}.md"
+          if [[ ! -f "${notes_file}" ]]; then
+            echo "::error::Missing release notes: ${notes_file}"
+            exit 1
+          fi
+
+          cp "${notes_file}" build/release/notes.base.md
 
       - name: Build
         run: ./gradlew --no-daemon -PlatticeVersion=${{ steps.release.outputs.version }} build :lattice-paper:standaloneJar
 
       - name: Check Maven Central credentials
+        if: steps.release.outputs.publish_maven_central == 'true'
         shell: bash
         env:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
@@ -93,7 +145,32 @@ jobs:
           fi
 
       - name: Publish to Maven Central
-        run: ./gradlew --no-daemon -PlatticeVersion=${{ steps.release.outputs.version }} publishAndReleaseToMavenCentral
+        id: maven_central
+        if: steps.release.outputs.publish_maven_central == 'true'
+        shell: bash
+        run: |
+          mkdir -p build/release
+          log_file="build/release/maven-central-publish.log"
+          known_timeout_message="Deployment validation timed out after 900s. Last known state: PUBLISHING"
+
+          set +e
+          ./gradlew --no-daemon -PlatticeVersion=${{ steps.release.outputs.version }} publishAndReleaseToMavenCentral 2>&1 | tee "${log_file}"
+          gradle_status=${PIPESTATUS[0]}
+          set -e
+
+          if [[ "${gradle_status}" -eq 0 ]]; then
+            echo "status=success" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          if grep -Fq -- "${known_timeout_message}" "${log_file}"; then
+            echo "::warning::${known_timeout_message}; continuing with Maven Central status publishing_timeout."
+            echo "status=publishing_timeout" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          echo "status=failed" >> "${GITHUB_OUTPUT}"
+          exit "${gradle_status}"
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
@@ -102,24 +179,30 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_IN_MEMORY_KEY_ID }}
 
       - name: Publish to GitHub Packages mirror
-        run: ./gradlew --no-daemon -PlatticeVersion=${{ steps.release.outputs.version }} publishGitHubPackagesMirror
+        id: github_packages
+        if: >-
+          steps.release.outputs.publish_github_packages == 'true' &&
+          (
+            steps.release.outputs.publish_maven_central == 'false' ||
+            steps.maven_central.outputs.status == 'success' ||
+            steps.maven_central.outputs.status == 'publishing_timeout'
+          )
+        shell: bash
+        run: |
+          ./gradlew --no-daemon -PlatticeVersion=${{ steps.release.outputs.version }} publishGitHubPackagesMirror
+          echo "status=success" >> "${GITHUB_OUTPUT}"
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ github.token }}
 
-      - name: Write release notes
+      - name: Finalize release notes
+        if: steps.release.outputs.create_github_release == 'true'
         shell: bash
         env:
           VERSION: ${{ steps.release.outputs.version }}
+          GITHUB_PACKAGES_STATUS: ${{ steps.github_packages.outputs.status }}
         run: |
-          mkdir -p build/release
-          notes_file="docs/release-notes/${VERSION}.md"
-          if [[ ! -f "${notes_file}" ]]; then
-            echo "::error::Missing release notes: ${notes_file}"
-            exit 1
-          fi
-
-          cp "${notes_file}" build/release/notes.md
+          cp build/release/notes.base.md build/release/notes.md
           cat >> build/release/notes.md <<NOTES
 
           ## Artifacts
@@ -127,11 +210,26 @@ jobs:
           - Maven Central: \`io.github.hydr46605:lattice-api:${VERSION}\`
           - Maven Central: \`io.github.hydr46605:lattice-core:${VERSION}\`
           - Maven Central: \`io.github.hydr46605:lattice-paper:${VERSION}\`
+          NOTES
+
+          if [[ "${GITHUB_PACKAGES_STATUS}" == "success" ]]; then
+            cat >> build/release/notes.md <<NOTES
           - GitHub Packages mirror: \`dev.beryl:lattice-api:${VERSION}\`, \`dev.beryl:lattice-core:${VERSION}\`, \`dev.beryl:lattice-paper:${VERSION}\`
+          NOTES
+          fi
+
+          cat >> build/release/notes.md <<NOTES
           - Standalone Paper/Folia jar attached to this release
           NOTES
 
       - name: Create GitHub release
+        if: >-
+          steps.release.outputs.create_github_release == 'true' &&
+          (
+            steps.release.outputs.publish_maven_central == 'false' ||
+            steps.maven_central.outputs.status == 'success' ||
+            steps.maven_central.outputs.status == 'publishing_timeout'
+          )
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -152,12 +250,33 @@ jobs:
             "lattice-paper/build/libs/lattice-paper-${VERSION}-standalone.jar"
           )
 
-          release_flags=()
+          create_flags=(--latest)
           if [[ "${PRERELEASE}" == "true" ]]; then
-            release_flags+=(--prerelease)
+            create_flags=(--prerelease --latest=false)
           fi
 
           if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            release_id="$(gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json databaseId --jq '.databaseId')"
+            python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          prerelease = os.environ["PRERELEASE"] == "true"
+          payload = {
+              "name": f"Lattice {os.environ['VERSION']}",
+              "body": Path("build/release/notes.md").read_text(encoding="utf-8"),
+              "target_commitish": os.environ["GITHUB_SHA"],
+              "prerelease": prerelease,
+              "make_latest": "false" if prerelease else "true",
+          }
+          Path("build/release/update-release.json").write_text(
+              json.dumps(payload),
+              encoding="utf-8",
+          )
+          PY
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/releases/${release_id}" \
+              --input build/release/update-release.json >/dev/null
             gh release upload "${TAG}" "${artifacts[@]}" --clobber --repo "${GITHUB_REPOSITORY}"
           else
             gh release create "${TAG}" "${artifacts[@]}" \
@@ -165,5 +284,5 @@ jobs:
               --target "${GITHUB_SHA}" \
               --title "Lattice ${VERSION}" \
               --notes-file build/release/notes.md \
-              "${release_flags[@]}"
+              "${create_flags[@]}"
           fi
