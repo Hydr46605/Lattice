@@ -96,6 +96,19 @@ class StandaloneLatticeHostTest {
     }
 
     @Test
+    void disablingANewManagedRuntimeUnregistersItsHandle() {
+        StandaloneLatticeHost host = host("Lattice");
+        LatticePluginHandle handle = host.register(plugin("Dependent"), builder -> builder
+                .replaceService(LatticeRuntime.TASK_SERVICE, new NoopTaskService())
+                .replaceService(LatticeRuntime.COMMAND_SERVICE, new NoopCommandService()));
+
+        handle.disable();
+
+        assertTrue(host.handle("Dependent").isEmpty());
+        assertTrue(host.handles().isEmpty());
+    }
+
+    @Test
     void disableManagedPluginsContinuesAfterDependentDisableFailure() {
         StandaloneLatticeHost host = host("Lattice");
         List<String> events = new ArrayList<>();

@@ -97,9 +97,21 @@ public final class LatticeRuntime {
     }
 
     public synchronized void disable() {
-        if (phase == LifecyclePhase.DISABLED || phase == LifecyclePhase.NEW) {
-            phase = LifecyclePhase.DISABLED;
+        if (phase == LifecyclePhase.DISABLED) {
             return;
+        }
+        if (phase == LifecyclePhase.NEW) {
+            phase = LifecyclePhase.DISABLING;
+            Exception failure = null;
+            failure = collectFailure(failure, this::cancelTasks);
+            failure = collectFailure(failure, services::close);
+            if (failure == null) {
+                phase = LifecyclePhase.DISABLED;
+                return;
+            }
+            phase = LifecyclePhase.FAILED;
+            startupReportFailure("disable", failure);
+            throw lifecycleException("Failed to disable Lattice runtime " + context.runtimeId(), "disable", failure);
         }
 
         phase = LifecyclePhase.DISABLING;

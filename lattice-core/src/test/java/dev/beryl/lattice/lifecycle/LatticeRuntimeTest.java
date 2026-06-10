@@ -179,6 +179,23 @@ class LatticeRuntimeTest {
     }
 
     @Test
+    void disableBeforeLoadStillClosesServices() {
+        List<String> events = new ArrayList<>();
+        RecordingTaskService taskService = new RecordingTaskService();
+        RecordingCloseableService closeable = new RecordingCloseableService(events);
+        LatticeRuntime runtime = LatticeRuntime.builder("test")
+                .taskService(taskService)
+                .service(ServiceKey.of(RecordingCloseableService.class), closeable)
+                .build();
+
+        runtime.disable();
+
+        assertEquals(List.of("service:close"), events);
+        assertEquals(1, taskService.cancelAllCalls);
+        assertEquals(LifecyclePhase.DISABLED, runtime.phase());
+    }
+
+    @Test
     void startupReportKeepsStringEventsAndStructuredEntries() {
         LatticeRuntime runtime = LatticeRuntime.builder("report")
                 .module(new RecordingModule("core", new ArrayList<>()))
