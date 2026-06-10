@@ -178,6 +178,60 @@ class LatticeRuntimeTest {
         assertEquals(1, taskService.cancelAllCalls);
     }
 
+    @Test
+    void startupReportKeepsStringEventsAndStructuredEntries() {
+        LatticeRuntime runtime = LatticeRuntime.builder("report")
+                .module(new RecordingModule("core", new ArrayList<>()))
+                .build();
+
+        runtime.enable();
+
+        assertTrue(runtime.startupReport().events().contains("load"));
+        assertTrue(runtime.startupReport().events().contains("ready"));
+        assertTrue(runtime.startupReport().entries().stream()
+                .anyMatch(entry -> "load".equals(entry.operation()) && "completed".equals(entry.outcome())));
+        assertTrue(runtime.startupReport().entries().stream()
+                .anyMatch(entry -> "ready".equals(entry.operation()) && "completed".equals(entry.outcome())));
+    }
+
+    @Test
+    void startupReportRecordsModuleLifecycleFailureEntry() {
+        LatticeRuntime runtime = LatticeRuntime.builder("report")
+                .module(new RecordingModule("good", new ArrayList<>()))
+                .module(new FailingEnableModule("bad", new ArrayList<>()))
+                .build();
+
+        assertThrows(LifecycleException.class, runtime::enable);
+
+        StartupReport.Entry failure = runtime.startupReport().entries().stream()
+                .filter(entry -> "failed".equals(entry.outcome()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("enable", failure.operation());
+        assertEquals("bad", failure.moduleId());
+        assertTrue(failure.message() != null && !failure.message().isBlank());
+        assertTrue(failure.occurredAt() != null);
+    }
+
+    @Test
+    void startupReportRecordsDisableFailureEntry() {
+        LatticeRuntime runtime = LatticeRuntime.builder("report")
+                .module(new FailingDisableModule("core", new ArrayList<>()))
+                .build();
+
+        runtime.enable();
+        assertThrows(LifecycleException.class, runtime::disable);
+
+        StartupReport.Entry failure = runtime.startupReport().entries().stream()
+                .filter(entry -> "failed".equals(entry.outcome()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("disable", failure.operation());
+        assertEquals("core", failure.moduleId());
+        assertTrue(failure.message() != null && !failure.message().isBlank());
+        assertTrue(failure.occurredAt() != null);
+    }
+
     private record RecordingModule(String id, List<String> events) implements LatticeModule {
         @Override
         public ModuleDescriptor descriptor() {

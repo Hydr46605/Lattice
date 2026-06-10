@@ -56,8 +56,10 @@ public final class LatticeRuntime {
             startupReport.event("load");
             modules.loadAll(context);
             phase = LifecyclePhase.LOADED;
+            startupReport.completed("load");
         } catch (Exception exception) {
             phase = LifecyclePhase.FAILED;
+            startupReportFailure("load", exception);
             cleanupAfterFailure(exception);
             startupReport.finish(false);
             throw lifecycleException("Failed to load Lattice runtime " + context.runtimeId(), "load", exception);
@@ -79,12 +81,15 @@ public final class LatticeRuntime {
             phase = LifecyclePhase.ENABLING;
             startupReport.event("enable");
             modules.enableAll(context);
+            startupReport.completed("enable");
             startupReport.event("ready");
             modules.readyAll(context);
             phase = LifecyclePhase.READY;
+            startupReport.completed("ready");
             startupReport.finish(true);
         } catch (Exception exception) {
             phase = LifecyclePhase.FAILED;
+            startupReportFailure("enable", exception);
             cleanupAfterFailure(exception);
             startupReport.finish(false);
             throw lifecycleException("Failed to enable Lattice runtime " + context.runtimeId(), "enable", exception);
@@ -107,6 +112,7 @@ public final class LatticeRuntime {
             return;
         }
         phase = LifecyclePhase.FAILED;
+        startupReportFailure("disable", failure);
         throw lifecycleException("Failed to disable Lattice runtime " + context.runtimeId(), "disable", failure);
     }
 
@@ -137,6 +143,13 @@ public final class LatticeRuntime {
         String failureOperation = moduleFailure == null ? operation : moduleFailure.operation();
         String moduleId = moduleFailure == null ? null : moduleFailure.moduleId().value();
         return new LifecycleException(message, failure, context.runtimeId(), phase, failureOperation, moduleId);
+    }
+
+    private void startupReportFailure(String operation, Exception failure) {
+        ModuleLifecycleException moduleFailure = moduleFailure(failure);
+        String failureOperation = moduleFailure == null ? operation : moduleFailure.operation();
+        String moduleId = moduleFailure == null ? null : moduleFailure.moduleId().value();
+        startupReport.failure(failureOperation, moduleId, failure);
     }
 
     private ModuleLifecycleException moduleFailure(Throwable failure) {
