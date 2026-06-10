@@ -42,9 +42,9 @@ Build only the standalone Paper/Folia jar used for Modrinth:
 
 The primary public Maven publication target is Maven Central:
 
-- `io.github.hydr46605:lattice-api:0.8.4`
-- `io.github.hydr46605:lattice-core:0.8.4`
-- `io.github.hydr46605:lattice-paper:0.8.4`
+- `io.github.hydr46605:lattice-api:0.8.5`
+- `io.github.hydr46605:lattice-core:0.8.5`
+- `io.github.hydr46605:lattice-paper:0.8.5`
 
 The `io.github.hydr46605` namespace must be available in the Sonatype Central Portal before the first Maven Central release. Central publication also requires Apache-2.0 license metadata and signed artifacts.
 
@@ -82,9 +82,9 @@ is treated as a non-fatal `publishing_timeout` result so the workflow can contin
 
 The Gradle build also publishes all Maven modules to GitHub Packages as a permanent authenticated mirror under the original coordinates:
 
-- `dev.beryl:lattice-api:0.8.4`
-- `dev.beryl:lattice-core:0.8.4`
-- `dev.beryl:lattice-paper:0.8.4`
+- `dev.beryl:lattice-api:0.8.5`
+- `dev.beryl:lattice-core:0.8.5`
+- `dev.beryl:lattice-paper:0.8.5`
 
 Publication uses the `GitHubPackages` Maven repository:
 
@@ -130,7 +130,7 @@ Run it manually for a controlled release:
 ```bash
 gh workflow run "GitHub Release" \
   --repo Hydr46605/Lattice \
-  -f version=0.8.4 \
+  -f version=0.8.5 \
   -f prerelease=false \
   -f publish_maven_central=true \
   -f publish_github_packages=true \
@@ -140,11 +140,11 @@ gh workflow run "GitHub Release" \
 Or publish by pushing a version tag:
 
 ```bash
-git tag v0.8.4
-git push origin v0.8.4
+git tag v0.8.5
+git push origin v0.8.5
 ```
 
-Manual runs default to `prerelease=false`. Tag pushes infer prerelease status from the version name: only suffixes labeled `alpha`, `beta`, `rc`, `snapshot`, or `dev`, with optional qualifiers, are marked as prereleases. A normal `v0.8.4` tag is a stable release.
+Manual runs default to `prerelease=false`. Tag pushes infer prerelease status from the version name: only suffixes labeled `alpha`, `beta`, `rc`, `snapshot`, or `dev`, with optional qualifiers, are marked as prereleases. A normal `v0.8.5` tag is a stable release.
 
 When the matching `v<version>` tag already exists, the workflow checks out that tag before validating, building, publishing, and refreshing the GitHub Release. This keeps recovery runs tied to the same commit as the release tag. If the tag does not exist, the workflow uses the current checkout and creates the GitHub Release against that commit.
 
@@ -162,9 +162,9 @@ If Maven Central reaches the known `publishing_timeout` state, the GitHub Releas
 After the workflow finishes, verify:
 
 - the Actions run completed successfully, or only had the known Maven Central `publishing_timeout` warning;
-- the `v0.8.4` GitHub Release points at the intended commit, has all expected jar attachments, and has the correct latest/prerelease state;
+- the `v0.8.5` GitHub Release points at the intended commit, has all expected jar attachments, and has the correct latest/prerelease state;
 - the release notes include the expected changelog and artifact lines;
-- Maven Central resolves `io.github.hydr46605:lattice-api:0.8.4`, `io.github.hydr46605:lattice-core:0.8.4`, and `io.github.hydr46605:lattice-paper:0.8.4`;
+- Maven Central resolves `io.github.hydr46605:lattice-api:0.8.5`, `io.github.hydr46605:lattice-core:0.8.5`, and `io.github.hydr46605:lattice-paper:0.8.5`;
 - GitHub Packages resolves the `dev.beryl` mirror coordinates if the mirror was published.
 
 ## Modrinth Release
@@ -179,7 +179,7 @@ Run it manually when the Modrinth version should be published separately:
 ```bash
 gh workflow run "Modrinth Release" \
   --repo Hydr46605/Lattice \
-  -f version=0.8.4 \
+  -f version=0.8.5 \
   -f version_type=beta
 ```
 
