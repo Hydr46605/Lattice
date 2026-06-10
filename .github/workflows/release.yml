@@ -296,6 +296,8 @@ jobs:
           TAG: ${{ steps.release.outputs.tag }}
           VERSION: ${{ steps.release.outputs.version }}
           PRERELEASE: ${{ steps.release.outputs.prerelease }}
+          PUBLISH_MAVEN_CENTRAL: ${{ steps.release.outputs.publish_maven_central }}
+          PUBLISH_GITHUB_PACKAGES: ${{ steps.release.outputs.publish_github_packages }}
           RELEASE_COMMIT: ${{ steps.release_ref.outputs.commit }}
           TAG_EXISTS: ${{ steps.release_ref.outputs.tag_exists }}
           TAG_COMMIT: ${{ steps.release_ref.outputs.tag_commit }}
@@ -398,7 +400,16 @@ jobs:
             upload_asset_with_retry "${artifact}"
           done
 
+          preserve_existing_notes="false"
+          if [[ "${release_exists}" == "true" &&
+                "${PUBLISH_MAVEN_CENTRAL}" == "false" &&
+                "${PUBLISH_GITHUB_PACKAGES}" == "false" ]]; then
+            preserve_existing_notes="true"
+            echo "::notice::Package publish steps were skipped for an existing release; preserving release notes."
+          fi
+
           release_id="$(gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json databaseId --jq '.databaseId')"
+          export PRESERVE_EXISTING_NOTES="${preserve_existing_notes}"
           python3 - <<'PY'
           import json
           import os
@@ -407,12 +418,13 @@ jobs:
           prerelease = os.environ["PRERELEASE"] == "true"
           payload = {
               "name": f"Lattice {os.environ['VERSION']}",
-              "body": Path("build/release/notes.md").read_text(encoding="utf-8"),
               "target_commitish": os.environ["RELEASE_COMMIT"],
               "draft": False,
               "prerelease": prerelease,
               "make_latest": "false" if prerelease else "true",
           }
+          if os.environ["PRESERVE_EXISTING_NOTES"] != "true":
+              payload["body"] = Path("build/release/notes.md").read_text(encoding="utf-8")
           Path("build/release/update-release.json").write_text(
               json.dumps(payload),
               encoding="utf-8",

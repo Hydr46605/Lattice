@@ -148,7 +148,7 @@ Manual runs default to `prerelease=false`. Tag pushes infer prerelease status fr
 
 When the matching `v<version>` tag already exists, the workflow checks out that tag before validating, building, publishing, and refreshing the GitHub Release. This keeps recovery runs tied to the same commit as the release tag. If the tag does not exist, the workflow uses the current checkout and creates the GitHub Release against that commit.
 
-The workflow checks that the requested version matches `latticeVersion` in `gradle.properties` after the release ref is selected. Stable GitHub Releases are marked as latest. Prereleases are marked as prereleases and are not promoted to latest. Existing GitHub Releases are refreshed only when the built commit matches the release tag. During a refresh, existing release assets are left in place and only missing assets are uploaded; delete a specific release asset before rerunning the workflow if that asset must be replaced.
+The workflow checks that the requested version matches `latticeVersion` in `gradle.properties` after the release ref is selected. Stable GitHub Releases are marked as latest. Prereleases are marked as prereleases and are not promoted to latest. Existing GitHub Releases are refreshed only when the built commit matches the release tag. During a refresh, existing release assets are left in place and only missing assets are uploaded; delete a specific release asset before rerunning the workflow if that asset must be replaced. When both package publish switches are disabled for an existing release, the workflow preserves the current release notes while refreshing metadata and missing assets.
 
 The manual publish switches are for recovery, not for the normal first attempt:
 
