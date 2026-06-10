@@ -1,5 +1,6 @@
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.testing.Test
 import org.gradle.jvm.tasks.Jar
 
 plugins {
@@ -63,14 +64,18 @@ val generateStandalonePluginDescriptor by tasks.registering {
                   load: BEFORE
                   required: false
                   join-classpath: true
-                Junction:
-                  load: BEFORE
-                  required: false
-                  join-classpath: true
             """.trimIndent()
                 + "\n"
         )
     }
+}
+
+tasks.withType<Test>().configureEach {
+    dependsOn(generateStandalonePluginDescriptor)
+    systemProperty(
+        "lattice.standalonePluginDescriptor",
+        standalonePluginDescriptor.get().asFile.absolutePath
+    )
 }
 
 val standaloneJar by tasks.registering(Jar::class) {
