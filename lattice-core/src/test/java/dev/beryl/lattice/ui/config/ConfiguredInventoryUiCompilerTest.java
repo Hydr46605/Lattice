@@ -46,6 +46,18 @@ class ConfiguredInventoryUiCompilerTest {
     }
 
     @Test
+    void preservesConfiguredInventoryDefaults() {
+        ConfiguredInventoryScreen defaultRows = screenWithRows(0, page("main", button(0, ConfiguredUiIcon.material("paper"))));
+        UiScreen screen = new ConfiguredInventoryUiCompiler(Component::text)
+                .compile("defaulted-screen", defaultRows, ConfiguredUiActionResolver.noop());
+
+        assertEquals(54, screen.size());
+        assertEquals(1, new ConfiguredInventoryUiCompiler(Component::text)
+                .icon(new ConfiguredUiIcon("material", "paper", null, 0, null, List.of(), null))
+                .amount());
+    }
+
+    @Test
     void rejectsUnknownIconSources() {
         ConfiguredInventoryUiCompiler compiler = new ConfiguredInventoryUiCompiler(Component::text);
 
