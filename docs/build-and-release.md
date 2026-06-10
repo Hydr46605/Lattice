@@ -32,9 +32,9 @@ Build the standalone Paper/Folia jar used for release attachments and Modrinth:
 
 The primary public Maven publication target is Maven Central:
 
-- `io.github.hydr46605:lattice-api:0.8.2`
-- `io.github.hydr46605:lattice-core:0.8.2`
-- `io.github.hydr46605:lattice-paper:0.8.2`
+- `io.github.hydr46605:lattice-api:0.8.3`
+- `io.github.hydr46605:lattice-core:0.8.3`
+- `io.github.hydr46605:lattice-paper:0.8.3`
 
 The `io.github.hydr46605` namespace must be available in the Sonatype Central Portal before the first Maven Central release. Central publication also requires Apache-2.0 license metadata and signed artifacts.
 
@@ -64,9 +64,9 @@ Central releases are immutable. If a release upload succeeds but validation fail
 
 The Gradle build also publishes all Maven modules to GitHub Packages as a permanent authenticated mirror under the original coordinates:
 
-- `dev.beryl:lattice-api:0.8.2`
-- `dev.beryl:lattice-core:0.8.2`
-- `dev.beryl:lattice-paper:0.8.2`
+- `dev.beryl:lattice-api:0.8.3`
+- `dev.beryl:lattice-core:0.8.3`
+- `dev.beryl:lattice-paper:0.8.3`
 
 Publication uses the `GitHubPackages` Maven repository:
 
@@ -110,15 +110,15 @@ Run it manually for a controlled release:
 ```bash
 gh workflow run "GitHub Release" \
   --repo Hydr46605/Lattice \
-  -f version=0.8.2 \
+  -f version=0.8.3 \
   -f prerelease=true
 ```
 
 Or publish by pushing a version tag:
 
 ```bash
-git tag v0.8.2
-git push origin v0.8.2
+git tag v0.8.3
+git push origin v0.8.3
 ```
 
 The release workflow checks that the requested version matches `latticeVersion` in `gradle.properties`.
@@ -135,7 +135,7 @@ Run it manually when the Modrinth version should be published separately:
 ```bash
 gh workflow run "Modrinth Release" \
   --repo Hydr46605/Lattice \
-  -f version=0.8.2 \
+  -f version=0.8.3 \
   -f version_type=beta
 ```
 

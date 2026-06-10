@@ -10,11 +10,11 @@ Lattice is a Java 21 framework for building structured Paper/Folia plugins. The 
 
 ## Coordinates
 
-For shared-runtime mode, install the standalone `Lattice` plugin on the server, compile dependent plugins with `compileOnly("io.github.hydr46605:lattice-paper:0.8.2")`, and declare a hard Paper dependency with `join-classpath: true`.
+For shared-runtime mode, install the standalone `Lattice` plugin on the server, compile dependent plugins with `compileOnly("io.github.hydr46605:lattice-paper:0.8.3")`, and declare a hard Paper dependency with `join-classpath: true`.
 
 ```kotlin
 dependencies {
-    compileOnly("io.github.hydr46605:lattice-paper:0.8.2")
+    compileOnly("io.github.hydr46605:lattice-paper:0.8.3")
 }
 ```
 
@@ -22,10 +22,10 @@ Use `lattice-core` directly only for platform-neutral libraries or tests that in
 
 ```kotlin
 dependencies {
-    implementation("io.github.hydr46605:lattice-core:0.8.2")
+    implementation("io.github.hydr46605:lattice-core:0.8.3")
 }
 ```
 
 Maven Central is the primary public Maven source under `io.github.hydr46605`. GitHub Packages remains available as an authenticated `dev.beryl` mirror for maintainers and existing fallback builds.
 
-For legacy isolated mode, shade `io.github.hydr46605:lattice-paper:0.8.2` into the dependent plugin and do not expect shared pools or aggregate diagnostics.
+For legacy isolated mode, shade `io.github.hydr46605:lattice-paper:0.8.3` into the dependent plugin and do not expect shared pools or aggregate diagnostics.
