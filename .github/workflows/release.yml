@@ -160,7 +160,13 @@ jobs:
           cp "${notes_file}" build/release/notes.base.md
 
       - name: Build
-        run: ./gradlew --no-daemon -PlatticeVersion=${{ steps.release.outputs.version }} build :lattice-paper:standaloneJar
+        run: >
+          ./gradlew --no-daemon -PlatticeVersion=${{ steps.release.outputs.version }}
+          build
+          :lattice-api:plainJavadocJar
+          :lattice-core:plainJavadocJar
+          :lattice-paper:plainJavadocJar
+          :lattice-paper:standaloneJar
 
       - name: Check Maven Central credentials
         if: steps.release.outputs.publish_maven_central == 'true'

@@ -22,7 +22,17 @@ Verify Maven publications locally:
 ./gradlew publishToMavenLocal
 ```
 
-Build the standalone Paper/Folia jar used for release attachments and Modrinth:
+Build the jars used for GitHub Release attachments:
+
+```bash
+./gradlew build \
+  :lattice-api:plainJavadocJar \
+  :lattice-core:plainJavadocJar \
+  :lattice-paper:plainJavadocJar \
+  :lattice-paper:standaloneJar
+```
+
+Build only the standalone Paper/Folia jar used for Modrinth:
 
 ```bash
 ./gradlew :lattice-paper:standaloneJar
