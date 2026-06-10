@@ -226,6 +226,7 @@ subprojects {
 
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
+        systemProperty("lattice.test.projectVersion", project.version.toString())
     }
 
     rootProject.tasks.named("publishGitHubPackagesMirror") {
