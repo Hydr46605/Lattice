@@ -1,6 +1,7 @@
 package dev.beryl.lattice.paper.command;
 
 import dev.beryl.lattice.command.CommandContext;
+import dev.beryl.lattice.command.CommandExceptionMappers;
 import dev.beryl.lattice.command.CommandExceptionMapper;
 import dev.beryl.lattice.command.CommandNode;
 import dev.beryl.lattice.command.CommandParseException;
@@ -24,8 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -39,7 +38,7 @@ public final class PaperCommandRegistrar implements CommandService {
     private final List<CommandNode> commands = new ArrayList<>();
 
     public PaperCommandRegistrar(JavaPlugin plugin) {
-        this(plugin, PaperCommandRegistrar::defaultExceptionMessage);
+        this(plugin, CommandExceptionMappers.defaultMapper());
     }
 
     public PaperCommandRegistrar(JavaPlugin plugin, CommandExceptionMapper exceptionMapper) {
@@ -222,25 +221,6 @@ public final class PaperCommandRegistrar implements CommandService {
         private UUID sourceUuid(CommandSender sender) {
             return sender instanceof Player player ? player.getUniqueId() : null;
         }
-    }
-
-    private static Component defaultExceptionMessage(Throwable throwable, CommandContext context) {
-        if (throwable instanceof CommandPermissionException) {
-            return Component.text("You do not have permission to use this command.", NamedTextColor.RED);
-        }
-        if (throwable instanceof CommandUsageException exception) {
-            return Component.text(exception.getMessage(), NamedTextColor.RED)
-                    .append(Component.newline())
-                    .append(Component.text("Usage: " + exception.usage(), NamedTextColor.RED));
-        }
-        if (throwable instanceof CommandParseException exception) {
-            Component message = Component.text(exception.getMessage(), NamedTextColor.RED);
-            return exception.usage()
-                    .map(usage -> message.append(Component.newline())
-                            .append(Component.text("Usage: " + usage, NamedTextColor.RED)))
-                    .orElse(message);
-        }
-        return Component.text("Command failed. Check the server console for details.", NamedTextColor.RED);
     }
 
     private enum CommandFailureCategory {
