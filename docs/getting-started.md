@@ -178,6 +178,27 @@ When startup or config loading fails, report `LifecycleException` and `ConfigExc
 
 For owner-edited inventory menus, see [Configured Inventory Authoring](api-guide.md#configured-inventory-authoring).
 
+## Optional Update Commands
+
+Lattice provides an experimental `UpdateService` for GitHub release checks. The standalone `Lattice` plugin uses it to report available Lattice updates on startup. Dependent plugins can use the same service behind their own admin command surface.
+
+```java
+UpdateService updates = context.require(LatticeRuntime.UPDATE_SERVICE);
+UpdateCheckResult result = updates.check(
+        GitHubReleaseUpdateSource.of("BerylStudios", "Justice", plugin.getPluginMeta().getVersion()));
+```
+
+Updating a jar is never automatic. After an explicit confirmation command, select a release asset and call the Paper helper:
+
+```java
+UpdateInstallResult install = PaperUpdateInstaller.install(updates, plugin, asset);
+if (install.status() == UpdateInstallStatus.INSTALLED_RESTART_REQUIRED) {
+    sender.sendMessage("Update installed. Restart the server to load the new jar.");
+}
+```
+
+Confirmed installs move the old jar into `Lattice/Old` when the standalone host is present, replace the jar at its original path, and require a server restart before the new code is loaded.
+
 ## API Status
 
 Lattice is pre-1.0. Public packages are annotated so plugin authors can see what is intended for use:

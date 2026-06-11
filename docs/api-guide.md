@@ -31,6 +31,12 @@ Use `compileOnly("io.github.hydr46605:lattice-paper:0.8.6")` for shared-runtime 
 | `dev.beryl.lattice.integration` | `IntegrationManager`, `IntegrationKey`, `Integration`, `IntegrationStatus`, `Capability`, `SimpleIntegration` | Optional plugin capability registration and lookup. |
 | `dev.beryl.lattice.diagnostics` | `DiagnosticService`, `DiagnosticSnapshot`, `DiagnosticFinding`, subsystem diagnostic records | Read-only runtime snapshots for support commands and health checks. |
 
+## Experimental Core Packages
+
+| Package | Main Types | Use |
+| --- | --- | --- |
+| `dev.beryl.lattice.update` | `UpdateService`, `GitHubReleaseUpdateSource`, `UpdateCheckResult`, `UpdateRelease`, `UpdateAsset`, `UpdateInstallRequest`, `UpdateInstallResult` | GitHub release update checks and explicit jar replacement requests for plugin-owned update commands. |
+
 ## Stable Paper Packages
 
 | Package | Main Types | Use |
@@ -41,6 +47,12 @@ Use `compileOnly("io.github.hydr46605:lattice-paper:0.8.6")` for shared-runtime 
 | `dev.beryl.lattice.paper.text` | `PaperAudiences` | Conversion and send helpers for Paper command senders and Adventure audiences. |
 | `dev.beryl.lattice.paper.integration` | `PaperIntegrations`, `PlaceholderApiService`, `PlaceholderExpansionSpec`, `PacketEventsService`, `PacketEventsPacketListener`, custom item services | Optional PlaceholderAPI, PacketEvents, Junction, Nexo, Oraxen, ItemsAdder, and CraftEngine bindings. |
 | `dev.beryl.lattice.paper.diagnostics` | `PaperDiagnosticRenderer` | Render diagnostics as Adventure components or plain lines. |
+
+## Experimental Paper Packages
+
+| Package | Main Types | Use |
+| --- | --- | --- |
+| `dev.beryl.lattice.paper.update` | `PaperUpdateInstaller` | Paper helper for resolving a plugin jar and creating an explicit install request that backs up old jars under `Lattice/Old` when the standalone host is installed. |
 
 Paper command, lifecycle, task, and UI implementation packages are internal. Use the stable core contracts instead of constructing Paper implementation classes directly.
 
@@ -79,6 +91,7 @@ Default service keys on `LatticeRuntime`:
 - `HOOK_SERVICE`
 - `UI_SERVICE`
 - `DIAGNOSTIC_SERVICE`
+- `UPDATE_SERVICE`
 
 ## Modules And Services
 
@@ -427,6 +440,35 @@ commands.register(CommandNode.command("example")
 ```
 
 Snapshots include lifecycle, startup report, modules, services, integrations with details, published hooks, command tree entries, tasks, UI, and storage state. Shared-runtime and isolated storage both report active JDBC health when connections are open.
+
+## Update Checks And Explicit Installs
+
+`UpdateService` checks GitHub Releases without owning your command surface. The standalone `Lattice` plugin uses it on startup to report available Lattice updates, and dependent plugins can use the same service for their own repositories.
+
+```java
+UpdateService updates = context.require(LatticeRuntime.UPDATE_SERVICE);
+UpdateCheckResult result = updates.check(
+        GitHubReleaseUpdateSource.of("BerylStudios", "Justice", plugin.getPluginMeta().getVersion()));
+
+if (result.status() == UpdateCheckStatus.UPDATE_AVAILABLE) {
+    UpdateRelease release = result.release().orElseThrow();
+    UpdateAsset asset = release.assets().stream()
+            .filter(candidate -> candidate.name().endsWith(".jar"))
+            .findFirst()
+            .orElseThrow();
+}
+```
+
+Jar replacement is intentionally explicit. A plugin can call it only after an admin confirms an update command such as `/justice update confirm`:
+
+```java
+UpdateInstallResult install = PaperUpdateInstaller.install(updates, plugin, asset);
+if (install.status() == UpdateInstallStatus.INSTALLED_RESTART_REQUIRED) {
+    sender.sendMessage("Update installed. Restart the server to load the new jar.");
+}
+```
+
+`PaperUpdateInstaller` moves the currently loaded plugin jar into `Lattice/Old` when the standalone host is installed, then writes the downloaded jar back to the original path. If no standalone `Lattice` plugin is available, it falls back to the current plugin data folder. Exploded development classpaths are reported as unsupported instead of being modified.
 
 ### Debugging Startup And Config Failures
 

@@ -23,6 +23,8 @@ import dev.beryl.lattice.storage.StorageService;
 import dev.beryl.lattice.task.TaskService;
 import dev.beryl.lattice.text.DefaultTextService;
 import dev.beryl.lattice.text.TextService;
+import dev.beryl.lattice.update.DefaultUpdateService;
+import dev.beryl.lattice.update.UpdateService;
 import dev.beryl.lattice.ui.UiService;
 import dev.beryl.lattice.util.Preconditions;
 import java.util.Optional;
@@ -123,6 +125,10 @@ public final class LatticeBuilder {
         return defaultService(LatticeRuntime.DIAGNOSTIC_SERVICE, diagnosticService);
     }
 
+    public LatticeBuilder updateService(UpdateService updateService) {
+        return defaultService(LatticeRuntime.UPDATE_SERVICE, updateService);
+    }
+
     public <T> LatticeBuilder integration(Integration<T> integration) {
         integrationManager().register(integration);
         return this;
@@ -149,6 +155,9 @@ public final class LatticeBuilder {
         }
         if (!services.contains(LatticeRuntime.DIAGNOSTIC_SERVICE)) {
             services.register(LatticeRuntime.DIAGNOSTIC_SERVICE, new DefaultDiagnosticService());
+        }
+        if (!services.contains(LatticeRuntime.UPDATE_SERVICE)) {
+            services.register(LatticeRuntime.UPDATE_SERVICE, new DefaultUpdateService());
         }
         return new LatticeRuntime(runtimeId, modules, services);
     }
