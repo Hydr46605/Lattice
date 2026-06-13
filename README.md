@@ -46,6 +46,7 @@ The framework gives plugin projects a clear structure from the first class:
 - platform-neutral UI surfaces for inventories, books, anvil input, and virtual sign input
 - JDBC storage helpers for SQLite, MySQL, MariaDB, and PostgreSQL through HikariCP
 - diagnostics snapshots for lifecycle, modules, services, integrations, hooks, command trees, tasks, UI, and storage
+- GitHub release update checks and explicit jar install helpers for plugin-owned update commands
 - optional Paper integrations for PlaceholderAPI, PacketEvents, Junction, Nexo, Oraxen, ItemsAdder, and CraftEngine
 
 ## Modules

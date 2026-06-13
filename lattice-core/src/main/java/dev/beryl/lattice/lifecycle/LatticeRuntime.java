@@ -14,6 +14,7 @@ import dev.beryl.lattice.service.SimpleServiceRegistry;
 import dev.beryl.lattice.storage.StorageService;
 import dev.beryl.lattice.task.TaskService;
 import dev.beryl.lattice.text.TextService;
+import dev.beryl.lattice.update.UpdateService;
 import dev.beryl.lattice.ui.UiService;
 
 public final class LatticeRuntime {
@@ -28,6 +29,7 @@ public final class LatticeRuntime {
     public static final ServiceKey<PluginHookService> HOOK_SERVICE = ServiceKey.of(PluginHookService.class);
     public static final ServiceKey<UiService> UI_SERVICE = ServiceKey.of(UiService.class);
     public static final ServiceKey<DiagnosticService> DIAGNOSTIC_SERVICE = ServiceKey.of(DiagnosticService.class);
+    public static final ServiceKey<UpdateService> UPDATE_SERVICE = ServiceKey.of(UpdateService.class);
 
     private final ModuleManager modules;
     private final SimpleServiceRegistry services;

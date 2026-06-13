@@ -30,6 +30,7 @@ import dev.beryl.lattice.storage.SqlMigration;
 import dev.beryl.lattice.storage.StorageConfig;
 import dev.beryl.lattice.storage.StorageConnection;
 import dev.beryl.lattice.storage.StorageService;
+import dev.beryl.lattice.update.UpdateService;
 import dev.beryl.lattice.ui.UiActions;
 import dev.beryl.lattice.ui.UiScreen;
 import dev.beryl.lattice.ui.config.ConfiguredInventoryButton;
@@ -121,6 +122,15 @@ class AuthoringCompatibilityTest {
                 .build();
 
         assertSame(mapper, runtime.context().require(LatticeRuntime.COMMAND_EXCEPTION_MAPPER));
+    }
+
+    @Test
+    void pluginAuthorsCanUseDefaultUpdateService() {
+        LatticeRuntime runtime = LatticeRuntime.builder("updates").build();
+
+        UpdateService updates = runtime.context().require(LatticeRuntime.UPDATE_SERVICE);
+
+        assertSame(updates, runtime.context().require(LatticeRuntime.UPDATE_SERVICE));
     }
 
     @Test

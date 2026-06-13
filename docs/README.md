@@ -5,7 +5,7 @@ Lattice is a Java 21 framework for building structured Paper/Folia plugins. The 
 ## Guide
 
 - [Getting Started](getting-started.md) - install from Maven Central, create a Lattice-powered Paper plugin, and register your first module.
-- [API Guide](api-guide.md) - lifecycle, modules, services, config, commands, text, tasks, UI, storage, integrations, hooks, templates, diagnostics, and Paper adapter APIs.
+- [API Guide](api-guide.md) - lifecycle, modules, services, config, commands, text, tasks, UI, storage, integrations, hooks, templates, diagnostics, update checks, and Paper adapter APIs.
 - [Build And Release](build-and-release.md) - local build commands, Maven Central publishing, GitHub Packages mirroring, GitHub Releases, and Modrinth release workflow usage.
 
 ## Coordinates

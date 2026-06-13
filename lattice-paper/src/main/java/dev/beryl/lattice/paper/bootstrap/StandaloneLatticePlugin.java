@@ -1,7 +1,15 @@
 package dev.beryl.lattice.paper.bootstrap;
 
+import dev.beryl.lattice.Lattice;
 import dev.beryl.lattice.lifecycle.LatticeRuntime;
+import dev.beryl.lattice.module.ModuleId;
 import dev.beryl.lattice.paper.integration.PaperIntegrationBootstrap;
+import dev.beryl.lattice.task.TaskOwner;
+import dev.beryl.lattice.task.TaskService;
+import dev.beryl.lattice.update.GitHubReleaseUpdateSource;
+import dev.beryl.lattice.update.UpdateCheckResult;
+import dev.beryl.lattice.update.UpdateCheckStatus;
+import dev.beryl.lattice.update.UpdateService;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -33,6 +41,7 @@ public final class StandaloneLatticePlugin extends JavaPlugin {
         }
         registerDefaultIntegrations(runtime);
         runtime.enable();
+        scheduleUpdateCheck(runtime);
     }
 
     @Override
@@ -56,6 +65,40 @@ public final class StandaloneLatticePlugin extends JavaPlugin {
     private void registerDefaultIntegrations(LatticeRuntime runtime) {
         runtime.context().find(LatticeRuntime.INTEGRATION_SERVICE)
                 .ifPresent(integrations -> PaperIntegrationBootstrap.registerDefaults(this, integrations));
+    }
+
+    private void scheduleUpdateCheck(LatticeRuntime runtime) {
+        UpdateService updates = runtime.context().find(LatticeRuntime.UPDATE_SERVICE).orElse(null);
+        TaskService tasks = runtime.context().find(LatticeRuntime.TASK_SERVICE).orElse(null);
+        if (updates == null || tasks == null) {
+            return;
+        }
+        TaskOwner owner = new TaskOwner(runtime.context().runtimeId(), ModuleId.of("updates"));
+        try {
+            tasks.runAsync(owner, () -> reportUpdateCheck(updates.check(
+                    GitHubReleaseUpdateSource.of("Hydr46605", "Lattice", Lattice.VERSION)
+            )));
+        } catch (RuntimeException exception) {
+            getLogger().fine("Unable to schedule Lattice update check: " + exception.getMessage());
+        }
+    }
+
+    private void reportUpdateCheck(UpdateCheckResult result) {
+        if (result.status() == UpdateCheckStatus.UPDATE_AVAILABLE) {
+            String releaseUrl = result.release()
+                    .flatMap(release -> release.htmlUrl().map(Object::toString))
+                    .map(value -> " (" + value + ")")
+                    .orElse("");
+            getLogger().warning("Lattice update available: "
+                    + result.currentVersion()
+                    + " -> "
+                    + result.latestVersion().orElse("unknown")
+                    + releaseUrl);
+            return;
+        }
+        if (result.status() == UpdateCheckStatus.UNKNOWN) {
+            getLogger().fine("Unable to check for Lattice updates: " + result.message().orElse("unknown failure"));
+        }
     }
 
     private RuntimeException collectFailure(RuntimeException current, RuntimeStep step) {
