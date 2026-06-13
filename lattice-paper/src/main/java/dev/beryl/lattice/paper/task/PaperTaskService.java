@@ -18,6 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import org.bukkit.Server;
 import org.bukkit.World;
@@ -28,6 +29,7 @@ public final class PaperTaskService implements TaskService {
     private static final long TICK_MILLIS = 50L;
 
     private final JavaPlugin plugin;
+    private final ReentrantLock lock = new ReentrantLock();
     private final Map<TaskOwner, Set<PaperTaskHandle>> handlesByOwner = new LinkedHashMap<>();
     private final Map<PaperTaskHandle, TaskContextType> contextsByHandle = new IdentityHashMap<>();
 
@@ -73,39 +75,54 @@ public final class PaperTaskService implements TaskService {
     }
 
     @Override
-    public synchronized void cancel(TaskOwner owner) {
-        Preconditions.requireNonNull(owner, "owner");
-        Set<PaperTaskHandle> handles = handlesByOwner.remove(owner);
-        if (handles == null) {
-            return;
-        }
-        for (PaperTaskHandle handle : Set.copyOf(handles)) {
-            contextsByHandle.remove(handle);
-            handle.cancel();
+    public void cancel(TaskOwner owner) {
+        lock.lock();
+        try {
+            Preconditions.requireNonNull(owner, "owner");
+            Set<PaperTaskHandle> handles = handlesByOwner.remove(owner);
+            if (handles == null) {
+                return;
+            }
+            for (PaperTaskHandle handle : Set.copyOf(handles)) {
+                contextsByHandle.remove(handle);
+                handle.cancel();
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
     @Override
-    public synchronized void cancelAll() {
-        for (TaskOwner owner : Set.copyOf(handlesByOwner.keySet())) {
-            cancel(owner);
+    public void cancelAll() {
+        lock.lock();
+        try {
+            for (TaskOwner owner : Set.copyOf(handlesByOwner.keySet())) {
+                cancel(owner);
+            }
+            plugin.getServer().getAsyncScheduler().cancelTasks(plugin);
+            plugin.getServer().getGlobalRegionScheduler().cancelTasks(plugin);
+        } finally {
+            lock.unlock();
         }
-        plugin.getServer().getAsyncScheduler().cancelTasks(plugin);
-        plugin.getServer().getGlobalRegionScheduler().cancelTasks(plugin);
     }
 
     @Override
-    public synchronized TaskDiagnostics diagnostics() {
-        Map<String, Integer> byOwner = new HashMap<>();
-        for (Map.Entry<TaskOwner, Set<PaperTaskHandle>> entry : handlesByOwner.entrySet()) {
-            byOwner.put(ownerLabel(entry.getKey()), entry.getValue().size());
-        }
+    public TaskDiagnostics diagnostics() {
+        lock.lock();
+        try {
+            Map<String, Integer> byOwner = new HashMap<>();
+            for (Map.Entry<TaskOwner, Set<PaperTaskHandle>> entry : handlesByOwner.entrySet()) {
+                byOwner.put(ownerLabel(entry.getKey()), entry.getValue().size());
+            }
 
-        Map<TaskContextType, Integer> byContext = new EnumMap<>(TaskContextType.class);
-        for (TaskContextType contextType : contextsByHandle.values()) {
-            byContext.merge(contextType, 1, Integer::sum);
+            Map<TaskContextType, Integer> byContext = new EnumMap<>(TaskContextType.class);
+            for (TaskContextType contextType : contextsByHandle.values()) {
+                byContext.merge(contextType, 1, Integer::sum);
+            }
+            return new TaskDiagnostics(contextsByHandle.size(), byOwner, byContext);
+        } finally {
+            lock.unlock();
         }
-        return new TaskDiagnostics(contextsByHandle.size(), byOwner, byContext);
     }
 
     private ScheduledTask schedule(
@@ -186,6 +203,7 @@ public final class PaperTaskService implements TaskService {
             Consumer<ScheduledTask> command,
             Runnable retired
     ) {
+        validateEntityScheduleThread();
         var entityRef = context.entityRef().orElseThrow();
         Entity entity = requireEntity(entityRef.entityId(), entityRef.worldName());
         if (schedule.repeating()) {
@@ -220,20 +238,40 @@ public final class PaperTaskService implements TaskService {
         return entity;
     }
 
-    private synchronized void track(TaskOwner owner, PaperTaskHandle handle, TaskContextType contextType) {
-        handlesByOwner.computeIfAbsent(owner, ignored -> Collections.newSetFromMap(new IdentityHashMap<>())).add(handle);
-        contextsByHandle.put(handle, contextType);
+    private void validateEntityScheduleThread() {
+        String threadName = Thread.currentThread().getName();
+        if (threadName.contains("Async")) {
+            throw new IllegalStateException(
+                    "Cannot schedule entity task from async thread '" + threadName + "'. " +
+                    "This is unsafe in Folia. Use TaskContext.global() instead."
+            );
+        }
     }
 
-    private synchronized void untrack(TaskOwner owner, PaperTaskHandle handle) {
-        contextsByHandle.remove(handle);
-        Set<PaperTaskHandle> handles = handlesByOwner.get(owner);
-        if (handles == null) {
-            return;
+    private void track(TaskOwner owner, PaperTaskHandle handle, TaskContextType contextType) {
+        lock.lock();
+        try {
+            handlesByOwner.computeIfAbsent(owner, ignored -> Collections.newSetFromMap(new IdentityHashMap<>())).add(handle);
+            contextsByHandle.put(handle, contextType);
+        } finally {
+            lock.unlock();
         }
-        handles.remove(handle);
-        if (handles.isEmpty()) {
-            handlesByOwner.remove(owner);
+    }
+
+    private void untrack(TaskOwner owner, PaperTaskHandle handle) {
+        lock.lock();
+        try {
+            contextsByHandle.remove(handle);
+            Set<PaperTaskHandle> handles = handlesByOwner.get(owner);
+            if (handles == null) {
+                return;
+            }
+            handles.remove(handle);
+            if (handles.isEmpty()) {
+                handlesByOwner.remove(owner);
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
