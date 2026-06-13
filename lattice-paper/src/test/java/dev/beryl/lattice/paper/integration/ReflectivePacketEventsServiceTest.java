@@ -16,7 +16,7 @@ class ReflectivePacketEventsServiceTest {
     @Test
     void registersListenerWithPriorityAndUnregistersOnce() {
         FakePacketEventsApi api = new FakePacketEventsApi();
-        ReflectivePacketEventsService service = new ReflectivePacketEventsService(api);
+        ReflectivePacketEventsService service = new ReflectivePacketEventsService(api, Runnable::run);
 
         PacketEventsListenerRegistration registration = service.registerListener(
                 new PacketEventsPacketListener() {
@@ -39,7 +39,7 @@ class ReflectivePacketEventsServiceTest {
     @Test
     void routesPacketReceiveAndSendEventsThroughWrapper() {
         FakePacketEventsApi api = new FakePacketEventsApi();
-        ReflectivePacketEventsService service = new ReflectivePacketEventsService(api);
+        ReflectivePacketEventsService service = new ReflectivePacketEventsService(api, Runnable::run);
         AtomicReference<PacketEventsPacketEvent> received = new AtomicReference<>();
 
         service.registerListener(new PacketEventsPacketListener() {
@@ -64,7 +64,7 @@ class ReflectivePacketEventsServiceTest {
     @Test
     void closeUnregistersOwnedListeners() {
         FakePacketEventsApi api = new FakePacketEventsApi();
-        ReflectivePacketEventsService service = new ReflectivePacketEventsService(api);
+        ReflectivePacketEventsService service = new ReflectivePacketEventsService(api, Runnable::run);
         service.registerListener(new PacketEventsPacketListener() {
         }, PacketEventsListenerPriority.LOW);
 
@@ -77,7 +77,7 @@ class ReflectivePacketEventsServiceTest {
     @Test
     void closeAttemptsAllOwnedListenersBeforeSurfacingUnregisterFailure() {
         FakePacketEventsApi api = new FakePacketEventsApi();
-        ReflectivePacketEventsService service = new ReflectivePacketEventsService(api);
+        ReflectivePacketEventsService service = new ReflectivePacketEventsService(api, Runnable::run);
         service.registerListener(new PacketEventsPacketListener() {
         }, PacketEventsListenerPriority.LOW);
         service.registerListener(new PacketEventsPacketListener() {
@@ -95,7 +95,7 @@ class ReflectivePacketEventsServiceTest {
     @Test
     void apiHandleSafelyCastsRawApi() {
         FakePacketEventsApi api = new FakePacketEventsApi();
-        PacketEventsApiHandle handle = new ReflectivePacketEventsService(api).apiHandle();
+        PacketEventsApiHandle handle = new ReflectivePacketEventsService(api, Runnable::run).apiHandle();
 
         assertEquals(FakePacketEventsApi.class, handle.as(FakePacketEventsApi.class).orElseThrow().getClass());
         assertTrue(handle.as(String.class).isEmpty());

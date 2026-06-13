@@ -78,7 +78,7 @@ public final class PaperIntegrationBootstrap {
                         Map.of("reason", "PacketEvents.getAPI returned null")
                 );
             }
-            ReflectivePacketEventsService service = new ReflectivePacketEventsService(api);
+            ReflectivePacketEventsService service = new ReflectivePacketEventsService(api, plugin);
             return SimpleIntegration.available(
                     PaperIntegrations.PACKET_EVENTS,
                     service,
