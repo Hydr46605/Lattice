@@ -615,11 +615,12 @@ public final class PaperUiService implements UiService, Listener {
             return;
         }
         Player player = playerEvent.getPlayer();
-        PaperTextInputUiSession session = virtualSignSession(player.getUniqueId()).orElse(null);
-        if (session == null) {
-            return;
-        }
+        lock.lock();
         try {
+            PaperTextInputUiSession session = virtualSignSession(player.getUniqueId()).orElse(null);
+            if (session == null || session.closed()) {
+                return;
+            }
             Method setCancelled = event.getClass().getMethod("setCancelled", boolean.class);
             setCancelled.invoke(event, true);
             Method getEditedBlockPosition = event.getClass().getMethod("getEditedBlockPosition");
@@ -640,7 +641,8 @@ public final class PaperUiService implements UiService, Listener {
             submitTextInput(player, session, lines);
         } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException exception) {
             plugin.getLogger().log(Level.WARNING, "Virtual sign input failed for player=" + player.getName(), exception);
-            remove(session);
+        } finally {
+            lock.unlock();
         }
     }
 }
