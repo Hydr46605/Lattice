@@ -26,8 +26,19 @@ final class PaperVirtualSignTextInputRenderer {
         if (!(session.surface() instanceof VirtualSignTextInputSurface surface) || !supported()) {
             return false;
         }
-        Position position = Position.block(player.getLocation());
-        Location location = position.toLocation(player.getWorld());
+
+        Location location;
+        Position position;
+        try {
+            position = Position.block(player.getLocation());
+            location = position.toLocation(player.getWorld());
+            if (location == null) {
+                return false;
+            }
+        } catch (IllegalStateException e) {
+            return false;
+        }
+
         session.signPosition(position.toBlock());
         session.signLocation(location);
         List<Component> lines = surface.initialLines().stream().<Component>map(Component::text).toList();
