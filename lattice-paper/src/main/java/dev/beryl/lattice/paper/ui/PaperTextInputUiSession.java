@@ -11,10 +11,10 @@ import org.bukkit.inventory.view.AnvilView;
 
 final class PaperTextInputUiSession extends PaperUiSession {
     private final TextInputSurface surface;
-    private boolean completed;
-    private AnvilView anvilView;
-    private BlockPosition signPosition;
-    private Location signLocation;
+    private volatile boolean completed;
+    private volatile AnvilView anvilView;
+    private volatile BlockPosition signPosition;
+    private volatile Location signLocation;
 
     PaperTextInputUiSession(PaperUiService service, UiOwner owner, UiViewerRef viewer, TextInputSurface surface) {
         super(service, owner, viewer);
