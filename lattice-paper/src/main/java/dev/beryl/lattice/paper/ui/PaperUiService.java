@@ -41,6 +41,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -73,6 +74,7 @@ public final class PaperUiService implements UiService, Listener {
     private final PaperBookViewRenderer bookRenderer = new PaperBookViewRenderer();
     private final PaperAnvilTextInputRenderer anvilRenderer;
     private final PaperVirtualSignTextInputRenderer virtualSignRenderer = new PaperVirtualSignTextInputRenderer();
+    private final ReentrantLock lock = new ReentrantLock();
     private final PlainTextComponentSerializer plainText = PlainTextComponentSerializer.plainText();
     private boolean eventHandlersRegistered;
 
@@ -217,7 +219,14 @@ public final class PaperUiService implements UiService, Listener {
     public void onInventoryClick(InventoryClickEvent event) {
         PaperInventoryUiSession inventorySession = session(event.getView().getTopInventory()).orElse(null);
         if (inventorySession != null) {
-            handleInventoryClick(event, inventorySession);
+            lock.lock();
+            try {
+                if (!inventorySession.closed()) {
+                    handleInventoryClick(event, inventorySession);
+                }
+            } finally {
+                lock.unlock();
+            }
             return;
         }
 
