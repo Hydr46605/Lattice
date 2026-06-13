@@ -5,6 +5,8 @@ import dev.beryl.lattice.util.Preconditions;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
+import java.util.ArrayList;
+import java.util.List;
 
 final class PaperInventorySurfaceRenderer {
     private final PaperUiIconRenderer icons;
@@ -23,6 +25,14 @@ final class PaperInventorySurfaceRenderer {
             return;
         }
 
+        List<UiButton> buttons;
+        synchronized (session) {
+            if (session.closed()) {
+                return;
+            }
+            buttons = new ArrayList<>(session.page().buttons());
+        }
+
         Inventory inventory = session.inventory();
         if (inventory == null) {
             PaperUiHolder holder = new PaperUiHolder(session.id());
@@ -32,7 +42,7 @@ final class PaperInventorySurfaceRenderer {
         }
 
         inventory.clear();
-        for (UiButton button : session.page().buttons()) {
+        for (UiButton button : buttons) {
             inventory.setItem(button.slot(), icons.item(button.icon()));
         }
         if (player.getOpenInventory().getTopInventory() == inventory) {
