@@ -406,10 +406,10 @@ public final class PaperUiService implements UiService, Listener {
     }
 
     private Optional<PaperInventoryUiSession> session(Inventory inventory) {
-        if (!(inventory.getHolder() instanceof PaperUiHolder holder)) {
-            return Optional.empty();
-        }
         synchronized (this) {
+            if (!(inventory.getHolder() instanceof PaperUiHolder holder)) {
+                return Optional.empty();
+            }
             PaperUiSession session = sessionsById.get(holder.sessionId());
             return session instanceof PaperInventoryUiSession inventorySession
                     ? Optional.of(inventorySession)
