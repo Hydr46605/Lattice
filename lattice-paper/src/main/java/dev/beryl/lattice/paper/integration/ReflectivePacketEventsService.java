@@ -8,6 +8,9 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
+import java.util.logging.Level;
+import org.bukkit.plugin.java.JavaPlugin;
 
 final class ReflectivePacketEventsService implements PacketEventsService, AutoCloseable {
     private static final String LISTENER_TYPE = "com.github.retrooper.packetevents.event.PacketListener";
@@ -16,11 +19,28 @@ final class ReflectivePacketEventsService implements PacketEventsService, AutoCl
 
     private final Object api;
     private final PacketEventsApiHandle apiHandle;
+    private final Consumer<Runnable> scheduler;
     private final List<ReflectiveRegistration> registrations = new ArrayList<>();
 
-    ReflectivePacketEventsService(Object api) {
+    ReflectivePacketEventsService(Object api, JavaPlugin plugin) {
+        this(api, buildScheduler(Preconditions.requireNonNull(plugin, "plugin")));
+    }
+
+    ReflectivePacketEventsService(Object api, Consumer<Runnable> scheduler) {
         this.api = Preconditions.requireNonNull(api, "api");
+        this.scheduler = Preconditions.requireNonNull(scheduler, "scheduler");
         this.apiHandle = PacketEventsApiHandle.of(api);
+    }
+
+    private static Consumer<Runnable> buildScheduler(JavaPlugin plugin) {
+        return callback -> plugin.getServer().getGlobalRegionScheduler().run(plugin, t -> {
+            try {
+                callback.run();
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.WARNING,
+                        "Packet event listener threw exception", e);
+            }
+        });
     }
 
     @Override
@@ -48,7 +68,7 @@ final class ReflectivePacketEventsService implements PacketEventsService, AutoCl
             Object proxy = Proxy.newProxyInstance(
                     listenerType.getClassLoader(),
                     new Class<?>[]{listenerType},
-                    new PacketListenerInvocationHandler(listener)
+                    new PacketListenerInvocationHandler(listener, scheduler)
             );
             Object nativePriority = nativePriority(priorityType, selectedPriority);
             Method register = eventManager.getClass().getMethod("registerListener", listenerType, priorityType);
@@ -96,9 +116,11 @@ final class ReflectivePacketEventsService implements PacketEventsService, AutoCl
 
     private static final class PacketListenerInvocationHandler implements InvocationHandler {
         private final PacketEventsPacketListener listener;
+        private final Consumer<Runnable> scheduler;
 
-        private PacketListenerInvocationHandler(PacketEventsPacketListener listener) {
+        private PacketListenerInvocationHandler(PacketEventsPacketListener listener, Consumer<Runnable> scheduler) {
             this.listener = listener;
+            this.scheduler = scheduler;
         }
 
         @Override
@@ -108,11 +130,13 @@ final class ReflectivePacketEventsService implements PacketEventsService, AutoCl
                 return invokeObjectMethod(proxy, method, args);
             }
             if ("onPacketReceive".equals(name) && args != null && args.length == 1) {
-                listener.onPacketReceive(new PacketEventsPacketEvent(args[0]));
+                PacketEventsPacketEvent event = new PacketEventsPacketEvent(args[0]);
+                scheduler.accept(() -> listener.onPacketReceive(event));
                 return null;
             }
             if ("onPacketSend".equals(name) && args != null && args.length == 1) {
-                listener.onPacketSend(new PacketEventsPacketEvent(args[0]));
+                PacketEventsPacketEvent event = new PacketEventsPacketEvent(args[0]);
+                scheduler.accept(() -> listener.onPacketSend(event));
                 return null;
             }
             if (method.isDefault()) {
