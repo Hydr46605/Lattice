@@ -554,28 +554,26 @@ public final class PaperUiService implements UiService, Listener {
             if (registeredRefreshEvents.contains(className)) {
                 return;
             }
-        }
-        try {
-            Class<?> rawEventClass = Class.forName(className);
-            if (!Event.class.isAssignableFrom(rawEventClass)) {
-                return;
-            }
-            @SuppressWarnings("unchecked")
-            Class<? extends Event> eventClass = (Class<? extends Event>) rawEventClass;
-            EventExecutor executor = (listener, event) -> refreshProviderSessions(providerId);
-            plugin.getServer().getPluginManager().registerEvent(
-                    eventClass,
-                    this,
-                    EventPriority.MONITOR,
-                    executor,
-                    plugin,
-                    true
-            );
-            synchronized (registeredRefreshEvents) {
+            try {
+                Class<?> rawEventClass = Class.forName(className);
+                if (!Event.class.isAssignableFrom(rawEventClass)) {
+                    return;
+                }
+                @SuppressWarnings("unchecked")
+                Class<? extends Event> eventClass = (Class<? extends Event>) rawEventClass;
+                EventExecutor executor = (listener, event) -> refreshProviderSessions(providerId);
+                plugin.getServer().getPluginManager().registerEvent(
+                        eventClass,
+                        this,
+                        EventPriority.MONITOR,
+                        executor,
+                        plugin,
+                        true
+                );
                 registeredRefreshEvents.add(className);
+            } catch (ClassNotFoundException ignored) {
+                // Custom item providers are optional.
             }
-        } catch (ClassNotFoundException ignored) {
-            // Custom item providers are optional.
         }
     }
 
