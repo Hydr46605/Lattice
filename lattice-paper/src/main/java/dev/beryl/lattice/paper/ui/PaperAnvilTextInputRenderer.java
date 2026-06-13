@@ -24,7 +24,17 @@ final class PaperAnvilTextInputRenderer {
         if (!(session.surface() instanceof AnvilTextInputSurface surface)) {
             return false;
         }
-        Location location = player.getLocation();
+
+        Location location;
+        try {
+            location = player.getLocation();
+            if (location == null) {
+                return false;
+            }
+        } catch (IllegalStateException e) {
+            return false;
+        }
+
         InventoryView view = player.openAnvil(location, true);
         if (!(view instanceof AnvilView anvilView)) {
             return false;
