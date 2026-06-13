@@ -39,8 +39,15 @@ final class PaperVirtualSignTextInputRenderer {
 
     void restore(Player player, PaperTextInputUiSession session) {
         Location location = session.signLocation();
-        if (location != null) {
+        if (location == null || location.getWorld() == null) {
+            return;
+        }
+
+        try {
             player.sendBlockChange(location, location.getBlock().getBlockData());
+        } catch (IllegalStateException e) {
+            // Thread doesn't own this region, skip restoration
+            // Block state will update naturally on next interaction
         }
     }
 }
