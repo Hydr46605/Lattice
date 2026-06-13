@@ -493,9 +493,14 @@ public final class PaperUiService implements UiService, Listener {
     }
 
     private void runOnPlayer(UiOwner owner, Player player, Runnable command) {
-        if (plugin.getServer().isOwnedByCurrentRegion(player)) {
-            command.run();
-            return;
+        lock.lock();
+        try {
+            if (plugin.getServer().isOwnedByCurrentRegion(player)) {
+                command.run();
+                return;
+            }
+        } finally {
+            lock.unlock();
         }
         schedule(owner, player, command);
     }
