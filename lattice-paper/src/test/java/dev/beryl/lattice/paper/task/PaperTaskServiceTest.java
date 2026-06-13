@@ -10,12 +10,14 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import org.junit.jupiter.api.Test;
 
 class PaperTaskServiceTest {
     @Test
     void ownerCancellationClearsContextDiagnostics() throws Exception {
         PaperTaskService service = allocate(PaperTaskService.class);
+        setField(service, "lock", new ReentrantLock());
         setField(service, "handlesByOwner", new LinkedHashMap<>());
         setField(service, "contextsByHandle", new IdentityHashMap<>());
 
