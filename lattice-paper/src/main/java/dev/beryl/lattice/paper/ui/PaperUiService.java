@@ -243,13 +243,18 @@ public final class PaperUiService implements UiService, Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPrepareAnvil(PrepareAnvilEvent event) {
-        PaperTextInputUiSession session = anvilSession(event.getView().getPlayer().getUniqueId()).orElse(null);
-        if (session == null || !(session.surface() instanceof AnvilTextInputSurface surface)) {
-            return;
+        lock.lock();
+        try {
+            PaperTextInputUiSession session = anvilSession(event.getView().getPlayer().getUniqueId()).orElse(null);
+            if (session == null || session.closed() || !(session.surface() instanceof AnvilTextInputSurface surface)) {
+                return;
+            }
+            event.getView().setRepairCost(0);
+            event.getView().setMaximumRepairCost(0);
+            event.setResult(renderIcon(surface.resultIcon()));
+        } finally {
+            lock.unlock();
         }
-        event.getView().setRepairCost(0);
-        event.getView().setMaximumRepairCost(0);
-        event.setResult(renderIcon(surface.resultIcon()));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
