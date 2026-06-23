@@ -43,8 +43,10 @@ public final class PaperIntegrationBootstrap {
                     new ReflectiveJunctionVariableService(junction, resolveVariable, variablesSnapshot)
             );
         } catch (ReflectiveOperationException exception) {
-            plugin.getLogger().log(Level.WARNING, "Junction is loaded but Lattice could not bind to its variable API.", exception);
-            return SimpleIntegration.failed(PaperIntegrations.JUNCTION_VARIABLES);
+            plugin.getLogger().log(Level.WARNING,
+                    "Junction is loaded but Lattice could not bind to its variable API: {0}",
+                    failureMessage(exception));
+            return SimpleIntegration.failed(PaperIntegrations.JUNCTION_VARIABLES, failureDetails(exception));
         }
     }
 
@@ -59,8 +61,10 @@ public final class PaperIntegrationBootstrap {
                     new PapiPlaceholderApiService(plugin)
             );
         } catch (ReflectiveOperationException | LinkageError exception) {
-            plugin.getLogger().log(Level.WARNING, "PlaceholderAPI is enabled but Lattice could not bind to it.", exception);
-            return SimpleIntegration.failed(PaperIntegrations.PLACEHOLDER_API);
+            plugin.getLogger().log(Level.WARNING,
+                    "PlaceholderAPI is enabled but Lattice could not bind to it: {0}",
+                    failureMessage(exception));
+            return SimpleIntegration.failed(PaperIntegrations.PLACEHOLDER_API, failureDetails(exception));
         }
     }
 
@@ -85,7 +89,9 @@ public final class PaperIntegrationBootstrap {
                     integrationDetails(service)
             );
         } catch (ReflectiveOperationException | LinkageError exception) {
-            plugin.getLogger().log(Level.WARNING, "PacketEvents is enabled but Lattice could not bind to it.", exception);
+            plugin.getLogger().log(Level.WARNING,
+                    "PacketEvents is enabled but Lattice could not bind to it: {0}",
+                    failureMessage(exception));
             return SimpleIntegration.failed(PaperIntegrations.PACKET_EVENTS, failureDetails(exception));
         }
     }
@@ -104,8 +110,10 @@ public final class PaperIntegrationBootstrap {
                     new ReflectiveNexoItemService(nexoItems, exists, itemFromId, idFromItem)
             );
         } catch (ReflectiveOperationException exception) {
-            plugin.getLogger().log(Level.WARNING, "Nexo is enabled but Lattice could not bind to its item API.", exception);
-            return SimpleIntegration.failed(PaperIntegrations.NEXO_ITEMS);
+            plugin.getLogger().log(Level.WARNING,
+                    "Nexo is enabled but Lattice could not bind to its item API: {0}",
+                    failureMessage(exception));
+            return SimpleIntegration.failed(PaperIntegrations.NEXO_ITEMS, failureDetails(exception));
         }
     }
 
@@ -123,8 +131,10 @@ public final class PaperIntegrationBootstrap {
                     new ReflectiveOraxenItemService(oraxenItems, isAnItem, getItemById, getIdByItem)
             );
         } catch (ReflectiveOperationException exception) {
-            plugin.getLogger().log(Level.WARNING, "Oraxen is enabled but Lattice could not bind to its item API.", exception);
-            return SimpleIntegration.failed(PaperIntegrations.ORAXEN_ITEMS);
+            plugin.getLogger().log(Level.WARNING,
+                    "Oraxen is enabled but Lattice could not bind to its item API: {0}",
+                    failureMessage(exception));
+            return SimpleIntegration.failed(PaperIntegrations.ORAXEN_ITEMS, failureDetails(exception));
         }
     }
 
@@ -142,8 +152,10 @@ public final class PaperIntegrationBootstrap {
                     new ReflectiveItemsAdderItemService(customStack, isInRegistry, getInstance, byItemStack)
             );
         } catch (ReflectiveOperationException exception) {
-            plugin.getLogger().log(Level.WARNING, "ItemsAdder is enabled but Lattice could not bind to its item API.", exception);
-            return SimpleIntegration.failed(PaperIntegrations.ITEMSADDER_ITEMS);
+            plugin.getLogger().log(Level.WARNING,
+                    "ItemsAdder is enabled but Lattice could not bind to its item API: {0}",
+                    failureMessage(exception));
+            return SimpleIntegration.failed(PaperIntegrations.ITEMSADDER_ITEMS, failureDetails(exception));
         }
     }
 
@@ -160,8 +172,10 @@ public final class PaperIntegrationBootstrap {
                     new ReflectiveCraftEngineItemService(craftEngineItems, byId, getCustomItemId)
             );
         } catch (ReflectiveOperationException exception) {
-            plugin.getLogger().log(Level.WARNING, "CraftEngine is enabled but Lattice could not bind to its item API.", exception);
-            return SimpleIntegration.failed(PaperIntegrations.CRAFTENGINE_ITEMS);
+            plugin.getLogger().log(Level.WARNING,
+                    "CraftEngine is enabled but Lattice could not bind to its item API: {0}",
+                    failureMessage(exception));
+            return SimpleIntegration.failed(PaperIntegrations.CRAFTENGINE_ITEMS, failureDetails(exception));
         }
     }
 
@@ -195,5 +209,10 @@ public final class PaperIntegrationBootstrap {
                 "reason", exception.getClass().getName(),
                 "message", exception.getMessage() == null ? "" : exception.getMessage()
         );
+    }
+
+    private static String failureMessage(Throwable exception) {
+        return exception.getClass().getSimpleName()
+                + (exception.getMessage() == null ? "" : ": " + exception.getMessage());
     }
 }
