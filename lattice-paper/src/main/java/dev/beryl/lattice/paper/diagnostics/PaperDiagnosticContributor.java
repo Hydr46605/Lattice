@@ -31,6 +31,7 @@ public final class PaperDiagnosticContributor implements DiagnosticContributor {
         details.put("version", plugin.getPluginMeta().getVersion());
         details.put("dataFolder", plugin.getDataFolder().toPath().toAbsolutePath().toString());
         details.put("enabled", Boolean.toString(plugin.isEnabled()));
+        details.put("currentThread", Thread.currentThread().getName());
         return new DiagnosticSnapshot(
                 id(),
                 DiagnosticStatus.OK,
