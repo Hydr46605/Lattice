@@ -204,14 +204,16 @@ public final class PaperIntegrationBootstrap {
         return details;
     }
 
-    private static Map<String, String> failureDetails(Throwable exception) {
+    static Map<String, String> failureDetails(Throwable exception) {
+        Preconditions.requireNonNull(exception, "exception");
         return Map.of(
                 "reason", exception.getClass().getName(),
                 "message", exception.getMessage() == null ? "" : exception.getMessage()
         );
     }
 
-    private static String failureMessage(Throwable exception) {
+    static String failureMessage(Throwable exception) {
+        Preconditions.requireNonNull(exception, "exception");
         return exception.getClass().getSimpleName()
                 + (exception.getMessage() == null ? "" : ": " + exception.getMessage());
     }
