@@ -441,6 +441,19 @@ commands.register(CommandNode.command("example")
 
 Snapshots include lifecycle, startup report, modules, services, integrations with details, published hooks, command tree entries, tasks, UI, and storage state. Shared-runtime and isolated storage both report active JDBC health when connections are open.
 
+The `paper` diagnostic contributor adds a `paper` snapshot whose `DiagnosticSnapshot.details` map is keyed by:
+
+- `plugin` - plugin name
+- `version` - plugin version from `PluginMeta`
+- `dataFolder` - absolute path of the plugin data directory
+- `enabled` - current plugin `isEnabled()` state
+- `currentThread` - `Thread.currentThread()` name at snapshot capture time; useful to verify Folia scheduler context from a diagnostics command
+
+Integration `Integration.details()` maps follow consistent shapes depending on `IntegrationStatus`:
+
+- `AVAILABLE` integrations (for example `PacketEvents` when bound) include `apiClass` and an optional `version` key.
+- `FAILED` integrations include `reason` (the exception class name) and `message` (the exception's message, or empty when null).
+
 ## Update Checks And Explicit Installs
 
 `UpdateService` checks GitHub Releases without owning your command surface. The standalone `Lattice` plugin uses it on startup to report available Lattice updates, and dependent plugins can use the same service for their own repositories.
