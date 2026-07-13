@@ -144,6 +144,8 @@ git tag v0.8.6
 git push origin v0.8.6
 ```
 
+Pushing a `v*` tag also fires the `Modrinth Release` workflow in parallel, so the standalone Paper/Folia jar is published to Modrinth as part of the same push unless recovery mode disables it.
+
 Manual runs default to `prerelease=false`. Tag pushes infer prerelease status from the version name: only suffixes labeled `alpha`, `beta`, `rc`, `snapshot`, or `dev`, with optional qualifiers, are marked as prereleases. A normal `v0.8.6` tag is a stable release.
 
 When the matching `v<version>` tag already exists, the workflow checks out that tag before validating, building, publishing, and refreshing the GitHub Release. This keeps recovery runs tied to the same commit as the release tag. If the tag does not exist, the workflow uses the current checkout and creates the GitHub Release against that commit.
@@ -169,12 +171,19 @@ After the workflow finishes, verify:
 
 ## Modrinth Release
 
-The `Modrinth Release` workflow publishes the standalone `lattice-paper` jar to Modrinth. It requires:
+The `Modrinth Release` workflow publishes the standalone `lattice-paper` jar to Modrinth. Like `GitHub Release`, it automatically triggers on push events whose ref matches a `v*` tag pattern. A normal `git push origin v<version>` therefore publishes all four channels in parallel (Maven Central, GitHub Packages mirror, GitHub Release, Modrinth).
+
+> **Prerequisite: Modrinth credentials.**
+> A failed `Modrinth Release` step does not roll back Maven Central, the GitHub Packages mirror, or the GitHub Release, but it does mark the workflow run as failed overall. Before the first `v*` tag push, confirm that the repository variable `MODRINTH_PROJECT_ID` and the secret `MODRINTH_TOKEN` are set; otherwise the workflow will fail at the credential check step and you will need to add them before retrying. The job-level error wording is `::error::Missing repository variable MODRINTH_PROJECT_ID.` and `::error::Missing repository secret MODRINTH_TOKEN.` respectively. The token must include Modrinth `PROJECT_WRITE` scope for the `Ed95iBPq` project; if it lacks that scope, the `Modrinth Project Metadata` sync workflow will also fail even though release publish may succeed.
+
+The workflow requires:
 
 - repository variable `MODRINTH_PROJECT_ID`
 - repository secret `MODRINTH_TOKEN`
 
-Run it manually when the Modrinth version should be published separately:
+The workflow itself does idempotency against `https://api.modrinth.com/v2/project/${MODRINTH_PROJECT_ID}/version`: if the requested version is already present it skips both `Build` and `Publish`. Manual `gh workflow run` is reserved for recovery only, since it would otherwise race the auto-fired run from the tag push.
+
+Run it manually only when the Modrinth version should be (re-)published separately:
 
 ```bash
 gh workflow run "Modrinth Release" \
@@ -182,8 +191,6 @@ gh workflow run "Modrinth Release" \
   -f version=0.8.6 \
   -f version_type=beta
 ```
-
-The workflow should be run only once for each Modrinth version.
 
 Modrinth changelogs are read from `docs/release-notes/<version>.md`. Add that file before running either release workflow.
 
